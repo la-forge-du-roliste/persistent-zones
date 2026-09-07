@@ -71,6 +71,7 @@ export class PersistentZoneActivitySheet extends dnd5e.applications.activity.Act
     context.persistentZone = normalizePersistentZoneActivitySubmitData(duplicateData(config));
     context.persistentZone.elevation = prepareElevationForScene(context.persistentZone.elevation);
     context.persistentZoneChoices = buildActivityChoices();
+    context.persistentZoneTranslation = prepareTranslationForScene(context.persistentZone?.translation);
     const controlledMovement = prepareControlledMovementForScene(context.persistentZone?.controlledMovement);
     const controlledMovementActivity = findControlledMovementCompanion(this.activity);
     context.persistentZoneControlledMovement = {
@@ -967,6 +968,11 @@ export function normalizePersistentZoneActivitySubmitData(value) {
   config.movement.units = normalizeCanonicalDistanceUnit(config.movement.units);
   config.movement.accumulateRemainder = Boolean(config.movement.accumulateRemainder);
   config.movement.aggregateApplications = config.movement.aggregateApplications !== false;
+  if (config.translation && typeof config.translation === "object") {
+    config.translation = normalizeUiTranslation(config.translation);
+  } else {
+    delete config.translation;
+  }
   config.controlledMovement = normalizeUiControlledMovement(config.controlledMovement);
   config.terrain ??= {};
   config.terrain.enabled = Boolean(config.terrain.enabled);
@@ -1288,6 +1294,19 @@ function normalizeUiControlledMovement(value = {}) {
     maxDistance: numberOrZero(source.maxDistance),
     physicalRadius: numberOrZero(source.physicalRadius),
     units: normalizeCanonicalDistanceUnit(source.units)
+  };
+}
+
+function normalizeUiTranslation(value = {}) {
+  const source = value && typeof value === "object" ? value : {};
+  const distance = Number(source.distance);
+  return {
+    ...foundry.utils.deepClone(source),
+    enabled: Boolean(source.enabled),
+    trigger: "source-turn-start",
+    distance: Number.isFinite(distance) && distance >= 0 ? distance : 0,
+    units: normalizeCanonicalDistanceUnit(source.units),
+    direction: "away-from-source"
   };
 }
 
@@ -1625,6 +1644,20 @@ function prepareControlledMovementForScene(value, scene = globalThis.canvas?.sce
     physicalRadius: convertCanonicalDistanceToSceneUnits(config.physicalRadius, sourceUnits, scene),
     units: sceneUnits,
     unitLabel: sceneUnits === "m" ? "m" : sceneUnits === "ft" ? "ft" : String(scene?.grid?.units ?? "")
+  };
+}
+
+function prepareTranslationForScene(value, scene = globalThis.canvas?.scene ?? null) {
+  const config = normalizeUiTranslation(value);
+  const sceneUnits = normalizeCanonicalDistanceUnit(scene?.grid?.units ?? scene?.grid?.unit);
+  const sourceUnits = normalizeCanonicalDistanceUnit(config.units);
+  return {
+    ...config,
+    distance: convertCanonicalDistanceToSceneUnits(config.distance, sourceUnits, scene),
+    units: sceneUnits,
+    unitLabel: sceneUnits === "m" ? "m" : sceneUnits === "ft" ? "ft" : String(scene?.grid?.units ?? ""),
+    triggerLabel: localize("PERSISTENT_ZONES.Activity.AutomaticMovement.SourceTurnStart"),
+    directionLabel: localize("PERSISTENT_ZONES.Activity.AutomaticMovement.AwayFromSource")
   };
 }
 

@@ -706,6 +706,34 @@
   {{/unless}}
   {{/if}}
 
+  <fieldset class="persistent-zone-activity__section">
+    <legend>{{localize "PERSISTENT_ZONES.Activity.Sections.AutomaticMovement"}}</legend>
+    <div class="form-group">
+      <label>{{localize "PERSISTENT_ZONES.Activity.Fields.AutomaticMovementEnabled"}}</label>
+      <input type="checkbox" name="persistentZone.translation.enabled" data-pz-toggle-source="automatic-movement" {{#if persistentZoneTranslation.enabled}}checked{{/if}}>
+    </div>
+    <div data-pz-toggle-target="automatic-movement">
+      <p class="hint persistent-zone-activity__section-hint">{{localize "PERSISTENT_ZONES.Activity.Help.AutomaticMovement"}}</p>
+      <input type="hidden" name="persistentZone.translation.trigger" value="source-turn-start">
+      <input type="hidden" name="persistentZone.translation.direction" value="away-from-source">
+      <input type="hidden" name="persistentZone.translation.units" value="{{persistentZoneTranslation.units}}">
+      <div class="form-group">
+        <label>{{localize "PERSISTENT_ZONES.Activity.AutomaticMovement.Timing"}}</label>
+        <input type="text" disabled value="{{persistentZoneTranslation.triggerLabel}}">
+      </div>
+      <div class="form-group">
+        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.AutomaticMovementDistance"}} ({{persistentZoneTranslation.unitLabel}})</label>
+        <input type="number" min="0" step="any" name="persistentZone.translation.distance" value="{{persistentZoneTranslation.distance}}">
+      </div>
+      <div class="form-group">
+        <label>{{localize "PERSISTENT_ZONES.Activity.AutomaticMovement.Direction"}}</label>
+        <input type="text" disabled value="{{persistentZoneTranslation.directionLabel}}">
+        <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.AutomaticMovementDirection"}}</p>
+      </div>
+      <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.AutomaticMovementLimits"}}</p>
+    </div>
+  </fieldset>
+
   <fieldset class="persistent-zone-activity__section" data-pz-attached-unsupported>
     <legend>{{localize "PERSISTENT_ZONES.Activity.Sections.ControlledMovement"}}</legend>
     <div class="form-group">

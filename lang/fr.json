@@ -171,6 +171,9 @@
         ,"ControlledMovement": "Permet de déplacer cette zone avec une Activity Utility liée. La distance et le rayon utilisent l’unité de la scène."
         ,"ControlledMovementPhysicalBody": "Définit la taille physique utilisée pour arrêter la zone lorsqu'elle touche une créature. Le corps est actuellement modélisé par un cercle."
         ,"ControlledMovementLinkedActivity": "Persistent Zones maintient le lien, l’absence de concentration et l’absence de consommation. Les autres réglages de l’Activity restent modifiables dans sa fiche native."
+        ,"AutomaticMovement": "Déplace automatiquement la zone selon le réglage ci-dessous. Les distances utilisent l’unité de la scène."
+        ,"AutomaticMovementDirection": "La zone se déplace en ligne droite en s’éloignant de son point de source."
+        ,"AutomaticMovementLimits": "Le déplacement suit un segment unique et s’arrête aux murs qui bloquent le mouvement. Aucun contournement automatique n’est effectué."
       },
       "Sections": {
         "Configuration": "Utilisation",
@@ -187,6 +190,7 @@
         "Effects": "Effets",
         "Movement": "Mouvement",
         "Terrain": "Terrain",
+        "AutomaticMovement": "Déplacement automatique",
         "MovementAndTerrain": "Mouvement et terrain",
         "LinkedDocuments": "Murs et lumières",
         "LinkedWalls": "Murs liés",
@@ -216,6 +220,8 @@
         "RadiusScalingPerLevel": "Rayon supplémentaire par niveau",
         "MovementDistanceStep": "Intervalle de distance des dégâts",
         "MovementDistanceUnits": "Unité de distance",
+        "AutomaticMovementEnabled": "Activer le déplacement automatique",
+        "AutomaticMovementDistance": "Distance de déplacement",
         "AccumulateMovementRemainder": "Cumuler la distance partielle",
         "TriggerFrequency": "Fréquence",
         "TriggerTargets": "Cibles",
@@ -297,6 +303,12 @@
         "LinkedActivityDisplay": "Activité liée : {activity}",
         "Linked": "L’activité de déplacement est liée.",
         "LinkFailed": "L’activité de déplacement n’a pas pu être créée ou mise à jour."
+      },
+      "AutomaticMovement": {
+        "Timing": "Moment",
+        "SourceTurnStart": "Au début du tour de la source",
+        "Direction": "Direction",
+        "AwayFromSource": "S’éloigner de la source"
       },
       "PlacementModes": { "Fixed": "Fixe", "AttachedSource": "Attachée au lanceur" },
       "DistanceUnits": { "Scene": "Unités de la scène", "Feet": "Pieds", "Meters": "Mètres" },

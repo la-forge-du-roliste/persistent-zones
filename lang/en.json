@@ -171,6 +171,9 @@
         ,"ControlledMovement": "Allows this zone to move using a linked Utility Activity. Distance and radius use the scene unit."
         ,"ControlledMovementPhysicalBody": "Defines the physical size used to stop the zone when it touches a creature. The body is currently modeled as a circle."
         ,"ControlledMovementLinkedActivity": "Persistent Zones maintains the link, no concentration, and no consumption. Other Activity settings remain editable on its native sheet."
+        ,"AutomaticMovement": "Moves the zone automatically with the settings below. Distances use the scene unit."
+        ,"AutomaticMovementDirection": "The zone moves in a straight line away from its source point."
+        ,"AutomaticMovementLimits": "Movement follows a single segment and stops at walls that block movement. No automatic pathfinding is performed."
       },
       "Sections": {
         "Configuration": "Usage",
@@ -187,6 +190,7 @@
         "Effects": "Effects",
         "Movement": "Movement",
         "Terrain": "Terrain",
+        "AutomaticMovement": "Automatic Zone Movement",
         "MovementAndTerrain": "Movement and Terrain",
         "LinkedDocuments": "Walls and Lights",
         "LinkedWalls": "Linked Walls",
@@ -216,6 +220,8 @@
         "RadiusScalingPerLevel": "Additional radius per level",
         "MovementDistanceStep": "Damage distance interval",
         "MovementDistanceUnits": "Distance unit",
+        "AutomaticMovementEnabled": "Enable Automatic Zone Movement",
+        "AutomaticMovementDistance": "Movement Distance",
         "AccumulateMovementRemainder": "Accumulate partial distance",
         "TriggerFrequency": "Frequency",
         "TriggerTargets": "Targets",
@@ -297,6 +303,12 @@
         "LinkedActivityDisplay": "Linked Activity: {activity}",
         "Linked": "The movement Activity is linked.",
         "LinkFailed": "The movement Activity could not be created or updated."
+      },
+      "AutomaticMovement": {
+        "Timing": "Timing",
+        "SourceTurnStart": "At the Start of the Source's Turn",
+        "Direction": "Direction",
+        "AwayFromSource": "Away from the Source"
       },
       "PlacementModes": { "Fixed": "Fixed", "AttachedSource": "Attached to caster" },
       "DistanceUnits": { "Scene": "Scene units", "Feet": "Feet", "Meters": "Meters" },

@@ -164,6 +164,8 @@ test("Activity template contains one static control per scalar Persistent Zone p
   assert.ok(names.includes("persistentZone.controlledMovement.enabled"));
   assert.ok(names.includes("persistentZone.controlledMovement.maxDistance"));
   assert.ok(names.includes("persistentZone.controlledMovement.physicalRadius"));
+  assert.ok(names.includes("persistentZone.translation.enabled"));
+  assert.ok(names.includes("persistentZone.translation.distance"));
   for (const binding of [
     "persistentZone.triggers.{{triggerRow.timing}}.simpleEffect.damage.enabled",
     "persistentZone.triggers.{{triggerRow.timing}}.simpleEffect.damage.formula",
@@ -175,6 +177,64 @@ test("Activity template contains one static control per scalar Persistent Zone p
   assert.doesNotMatch(template, /value="\{\{persistentZoneControlledMovement\.activationActivityId\}\}"/);
   assert.match(template, /<details class="persistent-zone-activity__trigger"/);
   assert.match(template, /persistent-zone-activity__trigger-effects/);
+});
+
+test("automatic movement UI defaults off and resolves canonical distance in the scene unit", () => {
+  const previousScene = canvas.scene;
+  canvas.scene = { grid: { units: "m", distance: 1.5, size: 100 } };
+  try {
+    const sheet = new PersistentZoneActivitySheet();
+    sheet.activity = {
+      _source: {
+        persistentZone: {
+          geometry: { type: "circle", radius: 3, units: "m" },
+          translation: { enabled: true, trigger: "source-turn-start", distance: 10, units: "ft", direction: "away-from-source" },
+          controlledMovement: { enabled: true, maxDistance: 9, physicalRadius: 0.75, units: "m" }
+        }
+      }
+    };
+    const context = sheet._preparePersistentZoneContext({ tabs: { persistentZone: {} } });
+    assert.equal(context.persistentZoneTranslation.enabled, true);
+    assert.equal(context.persistentZoneTranslation.distance, 3);
+    assert.equal(context.persistentZoneTranslation.units, "m");
+    assert.equal(context.persistentZoneTranslation.trigger, "source-turn-start");
+    assert.equal(context.persistentZoneTranslation.direction, "away-from-source");
+    assert.equal(context.persistentZoneControlledMovement.enabled, true, "automatic and controlled movement coexist");
+
+    const legacy = normalizePersistentZoneActivitySubmitData({ geometry: { type: "circle", radius: 3, units: "m" } });
+    assert.equal(legacy.translation, undefined, "legacy data remains absent until the UI is used");
+    sheet.activity._source.persistentZone = legacy;
+    assert.equal(sheet._preparePersistentZoneContext({ tabs: { persistentZone: {} } }).persistentZoneTranslation.enabled, false);
+    const saved = normalizePersistentZoneActivitySubmitData({
+      geometry: { type: "circle", radius: 3, units: "m" },
+      translation: { enabled: true, trigger: "source-turn-start", distance: 3, units: "m", direction: "away-from-source" }
+    });
+    assert.deepEqual(saved.translation, {
+      enabled: true, trigger: "source-turn-start", distance: 3, units: "m", direction: "away-from-source"
+    });
+  } finally {
+    canvas.scene = previousScene;
+  }
+});
+
+test("Cloudkill retains its automatic translation when loaded through the Activity UI", () => {
+  const source = structuredClone(getPersistentZonePreset("srd-5.2.1.cloudkill").persistentZone);
+  const saved = normalizePersistentZoneActivitySubmitData(source);
+  assert.deepEqual(saved.translation, {
+    enabled: true,
+    trigger: "source-turn-start",
+    distance: 10,
+    units: "ft",
+    direction: "away-from-source"
+  });
+  const submittedInMetricScene = normalizePersistentZoneActivitySubmitData(
+    mergePersistentZoneActivitySubmitData(saved, {
+      translation: { enabled: true, trigger: "source-turn-start", distance: 3, units: "m", direction: "away-from-source" }
+    })
+  );
+  assert.deepEqual(submittedInMetricScene.translation, {
+    enabled: true, trigger: "source-turn-start", distance: 3, units: "m", direction: "away-from-source"
+  });
 });
 
 test("trigger disclosure state survives a rerender without writing Activity data", () => {
@@ -212,6 +272,10 @@ test("Difficult Terrain and trigger summary copy is localized in EN and FR", () 
   assert.equal(fr.PERSISTENT_ZONES.Activity.TriggerTargeting.Proximity, "À proximité de la zone");
   assert.equal(en.PERSISTENT_ZONES.Activity.Fields.ControlledMovementPhysicalRadius, "Collision Radius");
   assert.equal(fr.PERSISTENT_ZONES.Activity.Fields.ControlledMovementPhysicalRadius, "Rayon de collision");
+  assert.equal(en.PERSISTENT_ZONES.Activity.Sections.AutomaticMovement, "Automatic Zone Movement");
+  assert.equal(fr.PERSISTENT_ZONES.Activity.Sections.AutomaticMovement, "Déplacement automatique");
+  assert.equal(en.PERSISTENT_ZONES.Activity.AutomaticMovement.SourceTurnStart, "At the Start of the Source's Turn");
+  assert.equal(fr.PERSISTENT_ZONES.Activity.AutomaticMovement.AwayFromSource, "S’éloigner de la source");
   assert.equal(en.PERSISTENT_ZONES.Activity.Help.TriggerTargetingPhysicalContact, "Detects the first creature touched by the zone's physical body while it moves.");
   assert.equal(fr.PERSISTENT_ZONES.Activity.Help.TriggerTargetingProximity, "Détecte les créatures dont le bord se trouve à la distance indiquée du bord de la zone.");
 });
