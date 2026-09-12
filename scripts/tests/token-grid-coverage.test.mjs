@@ -90,6 +90,29 @@ test("M11D native exclusion gates footprint coverage without replacing it", () =
   assert.equal(testTokenInsideManagedRegion({ ...token(), testInsideRegion: () => true }, partial), false);
 });
 
+test("an adopted centered rectangle uses the same visible bounds for footprint coverage and native access", () => {
+  // D&D5e initially places this semantic rectangle as a line, then the M11D
+  // adoption path writes the final Foundry rectangle with a central anchor.
+  // `x/y` are therefore its center, not its top-left corner.
+  const shapes = [{ type: "rectangle", x: 200, y: 100, width: 200, height: 100, anchorX: 0.5, anchorY: 0.5, rotation: 0 }];
+  const adopted = region(shapes);
+  adopted.flags["persistent-zones"].runtime.normalizedDefinition.obstacles = { mode: "wall-restricted" };
+
+  const fullyInside = { ...token(), x: 100, y: 50, testInsideRegion: () => true };
+  assert.equal(coverage({ x: 100, y: 50, width: 1, height: 1 }, shapes).coverageRatio, 1);
+  assert.equal(testTokenInsideManagedRegion(fullyInside, adopted), true);
+
+  const quarterInside = { ...token(), x: 275, y: 50, testInsideRegion: () => true };
+  assert.equal(coverage({ x: 275, y: 50, width: 1, height: 1 }, shapes).coverageRatio, 0.25);
+  assert.equal(testTokenInsideManagedRegion(quarterInside, adopted), false);
+
+  const halfInside = { ...token(), x: 250, y: 50, testInsideRegion: () => true };
+  assert.equal(coverage({ x: 250, y: 50, width: 1, height: 1 }, shapes).coverageRatio, 0.5);
+  assert.equal(testTokenInsideManagedRegion(halfInside, adopted), true);
+
+  assert.equal(testTokenInsideManagedRegion({ ...fullyInside, testInsideRegion: () => false }, adopted), false, "a real movement wall may still reject native accessibility");
+});
+
 test("Foundry-native mode delegates the final decision to token.testInsideRegion", () => {
   const previousGet = game.settings.get;
   game.settings.get = () => "foundry-native";

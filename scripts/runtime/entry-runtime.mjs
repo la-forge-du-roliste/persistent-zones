@@ -687,10 +687,47 @@ function onDeleteToken(tokenDocument) {
 export function isLegacyMovementRuntimeRegion(regionDocument) {
   const definition = getRegionRuntimeFlags(regionDocument)?.normalizedDefinition;
   if (definition?.placement?.mode === "attached-source") return false;
-  if (definition?.obstacles?.mode === "wall-restricted") {
-    return Boolean(definition?.triggers?.onMove?.enabled);
-  }
   return true;
+}
+
+/**
+ * Resolve a Foundry native Region boundary event through PZ's single
+ * membership doctrine. Native TOKEN_ENTER/TOKEN_EXIT are only candidates:
+ * they never by themselves decide whether the footprint crossed PZ's
+ * membership threshold.
+ */
+export function resolveNativeRegionMembershipTransition(tokenDocument, regionDocument, {
+  timing = "onEnter"
+} = {}) {
+  const insideStateKey = buildInsideStateKey(tokenDocument, regionDocument);
+  const cachedPreviousInside = regionInsideStates.get(insideStateKey);
+  const currentInside = testTokenInsideManagedRegion(tokenDocument, regionDocument);
+  // A missing cache can occur after a reload. Preserve the native event's
+  // direction only as the initial state, then immediately retain PZ's result.
+  const previousInside = cachedPreviousInside ?? (timing === "onExit");
+  if (currentInside) regionInsideStates.set(insideStateKey, true);
+  else regionInsideStates.delete(insideStateKey);
+  return {
+    previousInside,
+    currentInside,
+    insideStateKey,
+    transition: !previousInside && currentInside
+      ? "enter"
+      : previousInside && !currentInside
+        ? "exit"
+        : "none"
+  };
+}
+
+/** Seed the shared transition state without firing effects (creation/reload). */
+export function primeRegionMembershipState(regionDocument) {
+  const tokens = Array.from(regionDocument?.parent?.tokens?.contents ?? regionDocument?.parent?.tokens ?? []);
+  for (const tokenDocument of tokens) {
+    if (!tokenDocument?.id) continue;
+    const key = buildInsideStateKey(tokenDocument, regionDocument);
+    if (testTokenInsideManagedRegion(tokenDocument, regionDocument)) regionInsideStates.set(key, true);
+    else regionInsideStates.delete(key);
+  }
 }
 
 function clearProcessedMovementExecutionsForToken(tokenDocument) {
@@ -1402,7 +1439,7 @@ export function collectRegionEvaluations(tokenDocument, managedRegions, {
   });
 }
 
-async function applyRegionEvaluation(tokenDocument, evaluation, {
+export async function applyRegionEvaluation(tokenDocument, evaluation, {
   moveSource,
   movementSequenceId,
   movementMode,
@@ -1411,7 +1448,8 @@ async function applyRegionEvaluation(tokenDocument, evaluation, {
   fromState,
   toState,
   stopDecision,
-  movementInterrupted
+  movementInterrupted,
+  applyEffect = applyConfiguredTriggerEffect
 }) {
   const {
     regionDocument,
@@ -1485,6 +1523,7 @@ async function applyRegionEvaluation(tokenDocument, evaluation, {
   let triggerSuppressedBecauseMovementAlreadyStopped = false;
   let onEnterTriggered = false;
   let onMoveTriggered = false;
+  let entrySkipReason = null;
 
   if (!normalizedDefinition?.enabled) {
     debug("Skipped managed Region effect because the normalized definition is disabled.", {
@@ -1602,13 +1641,12 @@ async function applyRegionEvaluation(tokenDocument, evaluation, {
         triggerSuppressedBecauseMovementAlreadyStopped =
           onEnterSuppressed || onMoveSuppressed || onExitSuppressed;
       } else {
-        const boundaryTransitions = normalizedDefinition?.obstacles?.mode === "wall-restricted"
-          ? []
-          : Array.from(movementAnalysis.transitions ?? []);
+        const boundaryTransitions = Array.from(movementAnalysis.transitions ?? []);
         if (boundaryTransitions.length) {
           for (const [transitionIndex, transition] of boundaryTransitions.entries()) {
             if (transition.type === "onExit") {
               const exitApplied = await applyExitTriggerIfNeeded(tokenDocument, regionDocument, onExit, {
+                applyEffect,
                 moveSource,
                 movementSequenceId,
                 fromInside,
@@ -1627,6 +1665,8 @@ async function applyRegionEvaluation(tokenDocument, evaluation, {
 
             if (transition.type === "onEnter") {
               const enterApplied = await applyEnterTriggerIfNeeded(tokenDocument, regionDocument, onEnter, {
+                applyEffect,
+                reportSkip: (reason) => { entrySkipReason = reason; },
                 moveSource,
                 movementSequenceId,
                 fromInside,
@@ -1895,7 +1935,7 @@ async function applyRegionEvaluation(tokenDocument, evaluation, {
       damageFormula: resolveFirstCandidateTrigger(evaluation)?.damage?.formula ?? null,
       damageType: resolveFirstCandidateTrigger(evaluation)?.damage?.type ?? null,
       activityUuid: resolveFirstCandidateTrigger(evaluation)?.activity?.uuid ?? null,
-      skippedReason: resolveSkippedEffectReason(evaluation, {
+      skippedReason: entrySkipReason ?? resolveSkippedEffectReason(evaluation, {
         filterResult,
         onEnterTriggered,
         onMoveTriggered,
@@ -1912,6 +1952,8 @@ async function applyRegionEvaluation(tokenDocument, evaluation, {
 }
 
 async function applyEnterTriggerIfNeeded(tokenDocument, regionDocument, onEnter, {
+  applyEffect = applyConfiguredTriggerEffect,
+  reportSkip = () => {},
   moveSource,
   movementSequenceId = null,
   fromInside = null,
@@ -1937,6 +1979,7 @@ async function applyEnterTriggerIfNeeded(tokenDocument, regionDocument, onEnter,
   });
 
   if (!enterDetected) {
+    reportSkip("onEnter-not-detected");
     logTriggerSuppressedReason("onEnter-not-detected", {
       tokenId: tokenDocument.id,
       regionId: regionDocument.id,
@@ -1946,6 +1989,7 @@ async function applyEnterTriggerIfNeeded(tokenDocument, regionDocument, onEnter,
   }
 
   if (!onEnter.enabled) {
+    reportSkip("onEnter-disabled");
     debug("Skipped managed Region effect because onEnter is disabled.", {
       tokenId: tokenDocument.id,
       regionId: regionDocument.id
@@ -1959,6 +2003,7 @@ async function applyEnterTriggerIfNeeded(tokenDocument, regionDocument, onEnter,
   }
 
   if (!enterMovementModeMatched) {
+    reportSkip("onEnter-movement-mode-mismatch");
     debug("Skipped managed Region effect because movement mode did not match.", {
       tokenId: tokenDocument.id,
       regionId: regionDocument.id,
@@ -1979,6 +2024,7 @@ async function applyEnterTriggerIfNeeded(tokenDocument, regionDocument, onEnter,
   }
 
   if (isDuplicateMovementTrigger("enter", regionDocument, tokenDocument, moveSource, entryCenter)) {
+    reportSkip("onEnter-deduplicated");
     debug("Skipped managed Region effect because the entry was deduplicated.", {
       tokenId: tokenDocument.id,
       regionId: regionDocument.id
@@ -1992,7 +2038,7 @@ async function applyEnterTriggerIfNeeded(tokenDocument, regionDocument, onEnter,
     return false;
   }
 
-  const application = await applyConfiguredTriggerEffect({
+  const application = await applyEffect({
     regionDocument,
     tokenDocument,
     triggerConfig: onEnter,
@@ -2005,6 +2051,10 @@ async function applyEnterTriggerIfNeeded(tokenDocument, regionDocument, onEnter,
       moveSource
     }
   });
+
+  if (!application.applied || application.skipped) {
+    reportSkip(application.reason ?? "onEnter-executor-no-application");
+  }
 
   debug("Managed Region onEnter effect completed.", {
     tokenId: tokenDocument.id,
@@ -2417,6 +2467,7 @@ function buildAggregatedDistanceTrigger(trigger, count) {
 }
 
 async function applyExitTriggerIfNeeded(tokenDocument, regionDocument, onExit, {
+  applyEffect = applyConfiguredTriggerEffect,
   moveSource,
   movementSequenceId = null,
   fromInside = null,
@@ -2501,7 +2552,7 @@ async function applyExitTriggerIfNeeded(tokenDocument, regionDocument, onExit, {
     return false;
   }
 
-  const application = await applyConfiguredTriggerEffect({
+  const application = await applyEffect({
     regionDocument,
     tokenDocument,
     triggerConfig: onExit,

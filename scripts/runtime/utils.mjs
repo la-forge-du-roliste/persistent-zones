@@ -971,9 +971,15 @@ function buildRectanglePolygon(shape) {
   const origin = { x: coerceNumber(shape.x, 0), y: coerceNumber(shape.y, 0) };
   const width = coerceNumber(shape.width, 0);
   const height = coerceNumber(shape.height, 0);
+  const anchorX = coerceNumber(shape.anchorX, 0);
+  const anchorY = coerceNumber(shape.anchorY, 0);
   const radians = coerceNumber(shape.rotation, 0) * Math.PI / 180;
-  return [[0, 0], [width, 0], [width, height], [0, height]]
-    .map(([dx, dy]) => rotatePoint({ x: origin.x + dx, y: origin.y + dy }, origin, radians));
+  return [
+    [-anchorX * width, -anchorY * height],
+    [(1 - anchorX) * width, -anchorY * height],
+    [(1 - anchorX) * width, (1 - anchorY) * height],
+    [-anchorX * width, (1 - anchorY) * height]
+  ].map(([dx, dy]) => rotatePoint({ x: origin.x + dx, y: origin.y + dy }, origin, radians));
 }
 
 function buildLinePolygon(shape) {
@@ -1321,17 +1327,20 @@ function pointInEllipse(shape, point) {
 }
 
 function pointInRectangle(shape, point) {
-  const x = coerceNumber(shape.x, 0);
-  const y = coerceNumber(shape.y, 0);
+  const origin = { x: coerceNumber(shape.x, 0), y: coerceNumber(shape.y, 0) };
   const width = coerceNumber(shape.width, 0);
   const height = coerceNumber(shape.height, 0);
+  const anchorX = coerceNumber(shape.anchorX, 0);
+  const anchorY = coerceNumber(shape.anchorY, 0);
   const rotation = (coerceNumber(shape.rotation, 0) * Math.PI) / 180;
+  const x = origin.x - (anchorX * width);
+  const y = origin.y - (anchorY * height);
 
   if (!rotation) {
     return point.x >= x && point.x <= x + width && point.y >= y && point.y <= y + height;
   }
 
-  const localPoint = rotatePoint(point, { x, y }, -rotation);
+  const localPoint = rotatePoint(point, origin, -rotation);
   return (
     localPoint.x >= x &&
     localPoint.x <= x + width &&

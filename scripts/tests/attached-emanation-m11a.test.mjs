@@ -38,7 +38,7 @@ const {
   initializeAttachedEmanationTransitionState,
   registerAttachedEmanationRegionBehavior
 } = await import("../runtime/attached-emanation-runtime.mjs");
-const { isLegacyMovementRuntimeRegion, markNextMovementMode } = await import("../runtime/entry-runtime.mjs");
+const { isLegacyMovementRuntimeRegion } = await import("../runtime/entry-runtime.mjs");
 const { applyRegionOnCreateTrigger } = await import("../runtime/on-create-runtime.mjs");
 
 test("M11A RegionBehavior is registered in CONFIG and in the manifest-backed Document types", () => {
@@ -273,33 +273,34 @@ test("a delayed native initial enter is suppressed after creation finalization",
   assert.equal(applications, 0);
   assert.equal(first.reason, "delayed-initial-region-creation-enter");
   assert.equal(duplicate.reason, "delayed-initial-region-creation-enter");
+  target.testInsideRegion = () => false;
   await handleAttachedRegionTransition(region, nativeEvent(target), "onExit", {
     applyEffect: async () => { applications += 1; return { applied: true }; },
     cleanupStatuses: async () => {}
   });
+  target.testInsideRegion = () => true;
   await handleAttachedRegionTransition(region, nativeEvent(target), "onEnter", {
     applyEffect: async () => { applications += 1; return { applied: true }; }
   });
   assert.equal(applications, 2, "a real exit releases suppression so the next zone enter is applied");
 });
 
-test("zone and target movement each route exactly once through the native behavior", async () => {
+test("native zone movement uses the PZ membership transition while target movement is owned by entry runtime", async () => {
   const target = token("target");
+  target.testInsideRegion = () => true;
   const runtime = attachedRuntime({ onEnter: enabledTrigger(), onExit: enabledTrigger() });
   runtime.attachedTransitionState = { creationPhase: false, pendingInitialEnterTokenIds: [] };
   const region = mockRegion(runtime, [target]);
   const applications = [];
   const applyEffect = async (data) => { applications.push(data); return { applied: true }; };
   await handleAttachedRegionTransition(region, nativeEvent(target), "onEnter", { applyEffect });
+  target.testInsideRegion = () => false;
   await handleAttachedRegionTransition(region, nativeEvent(target), "onExit", { applyEffect, cleanupStatuses: async () => {} });
-  markNextMovementMode(target, "forced");
   await handleAttachedRegionTransition(region, nativeEvent(target, { movement: { passed: { waypoints: [] } } }), "onEnter", { applyEffect });
   await handleAttachedRegionTransition(region, nativeEvent(target, { movement: { passed: { waypoints: [] } } }), "onExit", { applyEffect, cleanupStatuses: async () => {} });
-  assert.deepEqual(applications.map(({ timing }) => timing), ["onEnter", "onExit", "onEnter", "onExit"]);
+  assert.deepEqual(applications.map(({ timing }) => timing), ["onEnter", "onExit"]);
   assert.equal(applications[0].context.movementMode, undefined);
   assert.equal(applications[1].context.movementMode, undefined);
-  assert.equal(applications[2].context.movementMode, "forced");
-  assert.equal(applications[3].context.movementMode, "voluntary");
 });
 
 test("attached regions are excluded from the legacy movement runtime while fixed regions remain eligible", () => {
@@ -309,7 +310,7 @@ test("attached regions are excluded from the legacy movement runtime while fixed
   }, [])), true);
 });
 
-test("wall-restricted fixed Regions use native boundary events without legacy duplicate movement", async () => {
+test("wall-restricted fixed Regions use central movement membership and native zone-movement reconciliation", async () => {
   const target = token("restricted-target");
   const runtime = {
     normalizedDefinition: {
@@ -320,7 +321,8 @@ test("wall-restricted fixed Regions use native boundary events without legacy du
     attachedTransitionState: { creationPhase: false, pendingInitialEnterTokenIds: [] }
   };
   const region = mockRegion(runtime, [target]);
-  assert.equal(isLegacyMovementRuntimeRegion(region), false);
+  target.testInsideRegion = () => true;
+  assert.equal(isLegacyMovementRuntimeRegion(region), true);
   const timings = [];
   await handleAttachedRegionTransition(region, nativeEvent(target), "onEnter", {
     applyEffect: async ({ timing, context }) => {
@@ -328,6 +330,7 @@ test("wall-restricted fixed Regions use native boundary events without legacy du
       return { applied: true };
     }
   });
+  target.testInsideRegion = () => false;
   await handleAttachedRegionTransition(region, nativeEvent(target), "onExit", {
     applyEffect: async ({ timing, context }) => {
       timings.push([timing, context.moveSource]);
@@ -338,7 +341,7 @@ test("wall-restricted fixed Regions use native boundary events without legacy du
   assert.deepEqual(timings, [["onEnter", "native-restricted-region"], ["onExit", "native-restricted-region"]]);
 });
 
-test("wall-restricted fixed Regions re-enter the movement runtime only for an onMove trigger", () => {
+test("wall-restricted fixed Regions always re-enter the movement runtime for central membership", () => {
   const withoutOnMove = mockRegion({
     normalizedDefinition: {
       placement: { mode: "fixed" },
@@ -353,8 +356,57 @@ test("wall-restricted fixed Regions re-enter the movement runtime only for an on
       triggers: { onMove: enabledTrigger() }
     }
   }, []);
-  assert.equal(isLegacyMovementRuntimeRegion(withoutOnMove), false);
+  assert.equal(isLegacyMovementRuntimeRegion(withoutOnMove), true);
   assert.equal(isLegacyMovementRuntimeRegion(withOnMove), true);
+});
+
+test("native boundary signals respect 2x2 footprint-50 transitions for a centered rectangle", async () => {
+  const previousCanvas = globalThis.canvas;
+  const previousGame = globalThis.game;
+  const target = token("large-target");
+  target.width = 2;
+  target.height = 2;
+  target.x = -200;
+  target.y = 0;
+  target.testInsideRegion = () => true;
+  const runtime = {
+    normalizedDefinition: {
+      enabled: true,
+      placement: { mode: "fixed" },
+      obstacles: { mode: "wall-restricted", restrictionType: "move", priority: 0 },
+      triggers: { onEnter: enabledTrigger(), onExit: enabledTrigger() }
+    },
+    attachedTransitionState: { creationPhase: false, pendingInitialEnterTokenIds: [] }
+  };
+  const region = mockRegion(runtime, [target]);
+  region.shapes = [{ type: "rectangle", x: 250, y: 250, width: 300, height: 300, anchorX: 0.5, anchorY: 0.5 }];
+  region.parent.grid = { type: 1, size: 100 };
+  globalThis.canvas = { scene: region.parent, grid: { size: 100, type: 1 } };
+  globalThis.game = { ...previousGame, version: "14.0.0", settings: { get: () => "footprint-50" }, user: previousGame.user, users: previousGame.users };
+  const applications = [];
+  const applyEffect = async ({ timing }) => { applications.push(timing); return { applied: true }; };
+  try {
+    // Foundry may signal a native enter at 25%, but PZ must ignore it.
+    target.x = 0; target.y = 0;
+    const at25 = await handleAttachedRegionTransition(region, nativeEvent(target), "onEnter", { applyEffect });
+    assert.equal(at25.applied, false);
+    assert.equal(at25.reason, "native-event-without-pz-membership-transition");
+    // At 50%, the central token movement runtime owns the event. Simulate the
+    // equivalent native signal without movement data for the boundary test.
+    target.x = 100; target.y = 0;
+    const at50 = await handleAttachedRegionTransition(region, nativeEvent(target), "onEnter", { applyEffect });
+    assert.equal(at50.applied, true);
+    target.x = 100; target.y = 100;
+    const at75 = await handleAttachedRegionTransition(region, nativeEvent(target), "onEnter", { applyEffect });
+    assert.equal(at75.applied, false);
+    target.x = 0; target.y = 0;
+    const exit = await handleAttachedRegionTransition(region, nativeEvent(target), "onExit", { applyEffect, cleanupStatuses: async () => {} });
+    assert.equal(exit.applied, true);
+    assert.deepEqual(applications, ["onEnter", "onExit"]);
+  } finally {
+    globalThis.canvas = previousCanvas;
+    globalThis.game = previousGame;
+  }
 });
 
 test("attached emanation configuration remains valid and isolated", () => {

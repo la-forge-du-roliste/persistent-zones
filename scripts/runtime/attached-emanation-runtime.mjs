@@ -1,8 +1,8 @@
 import { ATTACHED_EMANATION_BEHAVIOR_TYPE, MODULE_ID, RUNTIME_FLAG_KEY } from "../constants.mjs";
 import { applyConfiguredTriggerEffect, cleanupWhileInsideStatusesForRegionToken } from "./entry-effects.mjs";
 import {
-  consumeNativeRegionEventMovementMode,
-  managedMovementModeMatches
+  primeRegionMembershipState,
+  resolveNativeRegionMembershipTransition
 } from "./entry-runtime.mjs";
 import {
   getRegionRuntimeFlags,
@@ -90,6 +90,7 @@ export async function finalizeAttachedEmanationCreation(regionDocument) {
   };
   runtime.attachedTransitionState = finalized;
   attachedTransitionStates.set(regionDocument, finalized);
+  primeRegionMembershipState(regionDocument);
   await persistAttachedTransitionState(regionDocument, finalized);
   return finalized;
 }
@@ -97,7 +98,7 @@ export async function finalizeAttachedEmanationCreation(regionDocument) {
 export async function handleAttachedRegionTransition(regionDocument, event, timing, {
   applyEffect = applyConfiguredTriggerEffect,
   cleanupStatuses = cleanupWhileInsideStatusesForRegionToken,
-  consumeMovementMode = consumeNativeRegionEventMovementMode
+  consumeMovementMode: _consumeMovementMode = null
 } = {}) {
   if (!isPrimaryGM()) return { applied: false, reason: "not-primary-gm" };
   const runtime = getRegionRuntimeFlags(regionDocument);
@@ -121,20 +122,23 @@ export async function handleAttachedRegionTransition(regionDocument, event, timi
     await recordSuppressedInitialEnter(regionDocument, runtime, tokenDocument.id);
     return { applied: false, reason: transition.reason };
   }
-  if (timing === "onExit" || transition.cause === "targetMovement") {
+  // Token updates are evaluated by entry-runtime, which has the complete
+  // movement path. Do not let the native Region event duplicate or bypass its
+  // footprint membership transition.
+  if (transition.cause === "targetMovement") {
+    return { applied: false, reason: "target-movement-owned-by-entry-runtime" };
+  }
+  if (timing === "onExit") {
     await releaseInitialOccupantSuppression(regionDocument, runtime, tokenDocument.id);
   }
 
   const triggerConfig = runtime.normalizedDefinition?.triggers?.[timing] ?? {};
-  const movementResolution = transition.cause === "targetMovement"
-    ? consumeMovementMode(tokenDocument)
-    : null;
-  if (movementResolution && !managedMovementModeMatches(
-    movementResolution.resolvedMovementMode,
-    triggerConfig.movementMode ?? "any"
-  )) {
-    return { applied: false, reason: "movement-mode-mismatch" };
+  const membership = resolveNativeRegionMembershipTransition(tokenDocument, regionDocument, { timing });
+  const expectedTransition = timing === "onEnter" ? "enter" : "exit";
+  if (membership.transition !== expectedTransition) {
+    return { applied: false, reason: "native-event-without-pz-membership-transition", membership };
   }
+  const movementResolution = null;
   const result = triggerConfig.enabled
     ? await applyEffect({
       regionDocument,
