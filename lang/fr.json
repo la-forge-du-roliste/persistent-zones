@@ -119,6 +119,10 @@
         "Half": "moitié",
         "NoneOnSuccess": "aucun"
       },
+      "AdvancedConditions": {
+        "TargetSummary": "Créature : {statuses}",
+        "SourceSummary": "Cette zone : {statuses}"
+      },
       "Help": {
         "ActivityConfig": "Crée une zone persistante unique, ou active les parties pour créer plusieurs zones logiques depuis le même placement.",
         "Multipart": "En mode zone unique, les Déclenchements ci-dessous s'appliquent à cette zone. Avec les parties activées, chaque partie possède ses propres Déclenchements ; Mouvement, Murs liés et Lumières liées restent des réglages généraux du placement.",
@@ -156,6 +160,8 @@
         "TriggerTargetingMove": "Le contact physique n'est disponible que lorsque le déplacement contrôlé est actif.",
         "TriggerTargetingPhysicalContact": "Détecte la première créature touchée par le corps physique de la zone pendant son déplacement.",
         "TriggerTargetingProximity": "Détecte les créatures dont le bord se trouve à la distance indiquée du bord de la zone.",
+        "RequiredAbsentStatuses": "Le déclenchement est ignoré si la créature affectée possède l’un de ces statuts.",
+        "RequiredAbsentSourceStatuses": "Le déclenchement est ignoré si cette zone a déjà appliqué l’un de ces statuts à la créature affectée.",
         "Save": "Si elle est activée, la sauvegarde configurée est résolue avant l'effet simple.",
         "SaveResult": "Choisissez si une sauvegarde réussie réduit les dégâts de moitié ou empêche l'effet simple.",
         "Statuses": "Applique l'état choisi et détermine s'il persiste après la sortie de la zone.",
@@ -180,6 +186,7 @@
         "Placement": "Placement",
         "Geometry": "Géométrie",
         "Triggers": "Déclenchements",
+        "AdvancedConditions": "Conditions avancées",
         "Save": "Sauvegarde",
         "Damage": "Dégâts",
         "Healing": "Soin",
@@ -229,6 +236,10 @@
         "TriggerEnabled": "Activer ce déclenchement",
         "ProximityDistance": "Distance de proximité",
         "TriggerFrequencyGroup": "Groupe de fréquence partagé",
+        "RequiredAbsentStatuses": "Statuts de la créature affectée",
+        "RequiredAbsentSourceStatuses": "Statuts déjà appliqués par cette zone",
+        "AddStatus": "Ajouter un statut…",
+        "RemoveStatus": "Retirer le statut",
         "DamageEnabled": "Appliquer des dégâts",
         "DamageScaling": "Scaling par emplacement",
         "DamageScalingBaseLevelMode": "Niveau de référence",

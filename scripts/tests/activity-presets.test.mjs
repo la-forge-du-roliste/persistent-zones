@@ -25,6 +25,32 @@ test("accepts versioned built-in presets", () => {
   }
 });
 
+test("built-in status guards retain their explicit scope through Activity preset application", async () => {
+  const usages = [];
+  for (const preset of getBuiltinPersistentZonePresets()) {
+    for (const [timing, trigger] of Object.entries(preset.persistentZone.triggers ?? {})) {
+      for (const field of ["requiredAbsentStatuses", "requiredAbsentSourceStatuses"]) {
+        if (!trigger[field]?.length) continue;
+        usages.push(`${preset.id}:${timing}:${field}`);
+        let persisted;
+        await applyPresetToActivity({ id: "guard-test", item: {
+          async updateActivity(_id, updates) {
+            if (updates.persistentZone) persisted = structuredClone(updates.persistentZone);
+          }
+        } }, preset);
+        assert.deepEqual(persisted.triggers[timing][field], trigger[field]);
+        assert.equal(Object.hasOwn(persisted.triggers[timing], "excludedStatuses"), false);
+      }
+    }
+  }
+  assert.deepEqual(usages.sort(), [
+    "srd-5.2.1.grease:enter:requiredAbsentStatuses",
+    "srd-5.2.1.grease:onCreate:requiredAbsentStatuses",
+    "srd-5.2.1.grease:turnEnd:requiredAbsentStatuses",
+    "srd-5.2.1.web:turnStart:requiredAbsentSourceStatuses"
+  ]);
+});
+
 test("rejects invalid presets and removes unsupported data", () => {
   assert.equal(normalizePreset(null), null);
   assert.equal(normalizePreset({ id: "bad", version: 2, name: "Bad", persistentZone: {} }), null);

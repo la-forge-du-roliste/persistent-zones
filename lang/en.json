@@ -119,6 +119,10 @@
         "Half": "half",
         "NoneOnSuccess": "none"
       },
+      "AdvancedConditions": {
+        "TargetSummary": "Creature: {statuses}",
+        "SourceSummary": "This Zone: {statuses}"
+      },
       "Help": {
         "ActivityConfig": "Create one persistent zone, or enable zone parts to create several logical zones from the same placement.",
         "Multipart": "In single-zone mode, the Triggers below apply to one zone. With zone parts enabled, each part has its own Triggers; Movement, Linked Walls, and Linked Lights remain general placement settings.",
@@ -156,6 +160,8 @@
         "TriggerTargetingMove": "Physical contact is available only while controlled movement is enabled.",
         "TriggerTargetingPhysicalContact": "Detects the first creature touched by the zone's physical body while it moves.",
         "TriggerTargetingProximity": "Detects creatures whose edge is within the configured distance of the zone's edge.",
+        "RequiredAbsentStatuses": "The trigger is skipped if the affected creature has any of these statuses.",
+        "RequiredAbsentSourceStatuses": "The trigger is skipped if this zone has already applied any of these statuses to the affected creature.",
         "Save": "If enabled, the configured saving throw is resolved before the simple effect.",
         "SaveResult": "Choose whether a successful save halves damage or prevents the simple effect.",
         "Statuses": "Applies the selected status and controls whether it remains after the token leaves the zone.",
@@ -180,6 +186,7 @@
         "Placement": "Placement",
         "Geometry": "Geometry",
         "Triggers": "Triggers",
+        "AdvancedConditions": "Advanced Conditions",
         "Save": "Save",
         "Damage": "Damage",
         "Healing": "Healing",
@@ -229,6 +236,10 @@
         "TriggerEnabled": "Enable this trigger",
         "ProximityDistance": "Proximity Distance",
         "TriggerFrequencyGroup": "Shared frequency group",
+        "RequiredAbsentStatuses": "Affected Creature Statuses",
+        "RequiredAbsentSourceStatuses": "Statuses Already Applied by This Zone",
+        "AddStatus": "Add a Status…",
+        "RemoveStatus": "Remove status",
         "DamageEnabled": "Apply damage",
         "DamageScaling": "Slot scaling",
         "DamageScalingBaseLevelMode": "Reference level",

@@ -27,7 +27,7 @@ globalThis.CONFIG = {
     abilities: { dex: { abbreviation: "DEX" } },
     damageTypes: { fire: { label: "Fire" }, radiant: { label: "Radiant" } }
   },
-  statusEffects: [{ id: "restrained", name: "Restrained" }]
+  statusEffects: [{ id: "restrained", name: "Restrained" }, { id: "prone", name: "Prone" }]
 };
 globalThis.dnd5e = {
   dataModels: { activity: { BaseActivityData: class { static defineSchema() { return {}; } } } },
@@ -38,11 +38,17 @@ const { PersistentZoneActivityData } = await import("../activity/persistent-zone
 const { getPersistentZonePreset } = await import("../presets/preset-library.mjs");
 const {
   PersistentZoneActivitySheet,
+  addPersistentZoneStatusGuardValue,
   applyExplicitPersistentZoneCheckboxStates,
+  applyExplicitPersistentZoneStatusGuardStates,
   buildMultipartTriggerSummary,
+  capturePersistentZoneDisclosureState,
   captureTriggerOpenState,
   mergePersistentZoneActivitySubmitData,
   normalizePersistentZoneActivitySubmitData,
+  readPersistentZoneStatusGuardValues,
+  removePersistentZoneStatusGuardValue,
+  restorePersistentZoneDisclosureState,
   restoreTriggerOpenState
 } = await import("../activity/persistent-zone-activity-sheet.mjs");
 
@@ -161,6 +167,8 @@ test("Activity template contains one static control per scalar Persistent Zone p
   assert.equal(names.filter((name) => name === "persistentZone.geometry.radius").length, 1);
   assert.ok(names.includes("persistentZone.triggers.{{triggerRow.timing}}.targeting.mode"));
   assert.ok(names.includes("persistentZone.triggers.{{triggerRow.timing}}.targeting.distance"));
+  assert.ok(names.includes("persistentZone.triggers.{{../timing}}.requiredAbsentStatuses"));
+  assert.ok(names.includes("persistentZone.triggers.{{../timing}}.requiredAbsentSourceStatuses"));
   assert.ok(names.includes("persistentZone.controlledMovement.enabled"));
   assert.ok(names.includes("persistentZone.controlledMovement.maxDistance"));
   assert.ok(names.includes("persistentZone.controlledMovement.physicalRadius"));
@@ -259,6 +267,26 @@ test("trigger disclosure state survives a rerender without writing Activity data
   assert.equal(triggers[1].open, true);
 });
 
+test("stable disclosure IDs preserve multiple triggers and advanced condition sections across rerenders", () => {
+  const disclosures = [
+    { dataset: { pzDisclosureId: "trigger:turnStart" }, open: true },
+    { dataset: { pzDisclosureId: "trigger:turnStart:advanced-conditions" }, open: true },
+    { dataset: { pzDisclosureId: "trigger:move" }, open: true },
+    { dataset: { pzDisclosureId: "trigger:move:advanced-conditions" }, open: false }
+  ];
+  const root = { querySelectorAll: () => disclosures };
+  const open = capturePersistentZoneDisclosureState(root);
+  assert.deepEqual([...open], ["trigger:turnStart", "trigger:turnStart:advanced-conditions", "trigger:move"]);
+  disclosures.forEach((disclosure) => { disclosure.open = false; });
+  restorePersistentZoneDisclosureState(root, open);
+  assert.deepEqual(disclosures.map(({ dataset, open: isOpen }) => [dataset.pzDisclosureId, isOpen]), [
+    ["trigger:turnStart", true],
+    ["trigger:turnStart:advanced-conditions", true],
+    ["trigger:move", true],
+    ["trigger:move:advanced-conditions", false]
+  ]);
+});
+
 test("Difficult Terrain and trigger summary copy is localized in EN and FR", () => {
   const en = JSON.parse(fs.readFileSync(new URL("../../lang/en.json", import.meta.url), "utf8"));
   const fr = JSON.parse(fs.readFileSync(new URL("../../lang/fr.json", import.meta.url), "utf8"));
@@ -272,6 +300,20 @@ test("Difficult Terrain and trigger summary copy is localized in EN and FR", () 
   assert.equal(fr.PERSISTENT_ZONES.Activity.TriggerTargeting.Proximity, "À proximité de la zone");
   assert.equal(en.PERSISTENT_ZONES.Activity.Fields.ControlledMovementPhysicalRadius, "Collision Radius");
   assert.equal(fr.PERSISTENT_ZONES.Activity.Fields.ControlledMovementPhysicalRadius, "Rayon de collision");
+  assert.equal(en.PERSISTENT_ZONES.Activity.Fields.AddStatus, "Add a Status…");
+  assert.equal(fr.PERSISTENT_ZONES.Activity.Fields.AddStatus, "Ajouter un statut…");
+  assert.equal(en.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentStatuses, "Affected Creature Statuses");
+  assert.equal(fr.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentStatuses, "Statuts de la créature affectée");
+  assert.equal(en.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentSourceStatuses, "Statuses Already Applied by This Zone");
+  assert.equal(fr.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentSourceStatuses, "Statuts déjà appliqués par cette zone");
+  assert.equal(en.PERSISTENT_ZONES.Activity.Help.RequiredAbsentSourceStatuses,
+    "The trigger is skipped if this zone has already applied any of these statuses to the affected creature.");
+  assert.equal(fr.PERSISTENT_ZONES.Activity.Help.RequiredAbsentSourceStatuses,
+    "Le déclenchement est ignoré si cette zone a déjà appliqué l’un de ces statuts à la créature affectée.");
+  assert.equal(en.PERSISTENT_ZONES.Activity.AdvancedConditions.TargetSummary, "Creature: {statuses}");
+  assert.equal(fr.PERSISTENT_ZONES.Activity.AdvancedConditions.TargetSummary, "Créature : {statuses}");
+  assert.equal(en.PERSISTENT_ZONES.Activity.AdvancedConditions.SourceSummary, "This Zone: {statuses}");
+  assert.equal(fr.PERSISTENT_ZONES.Activity.AdvancedConditions.SourceSummary, "Cette zone : {statuses}");
   assert.equal(en.PERSISTENT_ZONES.Activity.Sections.AutomaticMovement, "Automatic Zone Movement");
   assert.equal(fr.PERSISTENT_ZONES.Activity.Sections.AutomaticMovement, "Déplacement automatique");
   assert.equal(en.PERSISTENT_ZONES.Activity.AutomaticMovement.SourceTurnStart, "At the Start of the Source's Turn");
@@ -405,6 +447,115 @@ test("unchecked FormData checkboxes become explicit false values", () => {
   assert.equal(submitData.persistentZone.elevation.enabled, false);
   assert.equal(submitData.persistentZone.elevation.topInclusive, true);
   assert.equal(submitData.persistentZone.geometry.radius, 10);
+});
+
+test("status guard tags round-trip multiple selections and explicitly clear an empty group", () => {
+  const existing = normalizePersistentZoneActivitySubmitData({
+    triggers: {
+      enter: {
+        requiredAbsentStatuses: ["prone"],
+        requiredAbsentSourceStatuses: ["restrained"]
+      }
+    }
+  });
+  const submitData = { persistentZone: { triggers: { enter: {} } } };
+  const groups = [
+    {
+      dataset: {
+        pzStatusGuardPath: "persistentZone.triggers.enter.requiredAbsentStatuses",
+        pzStatusGuardHadValue: "true"
+      },
+      querySelectorAll: () => [{ value: "Prone" }, { value: "restrained" }]
+    },
+    {
+      dataset: {
+        pzStatusGuardPath: "persistentZone.triggers.enter.requiredAbsentSourceStatuses",
+        pzStatusGuardHadValue: "true"
+      },
+      querySelectorAll: () => []
+    }
+  ];
+  applyExplicitPersistentZoneStatusGuardStates(submitData, {
+    querySelectorAll: () => groups
+  });
+  const saved = normalizePersistentZoneActivitySubmitData(
+    mergePersistentZoneActivitySubmitData(existing, submitData.persistentZone)
+  );
+  assert.deepEqual(saved.triggers.enter.requiredAbsentStatuses, ["prone", "restrained"]);
+  assert.deepEqual(saved.triggers.enter.requiredAbsentSourceStatuses, []);
+});
+
+test("status guard tag controls add once and remove exactly one value", () => {
+  const values = [];
+  const group = {
+    dataset: { pzStatusGuardPath: "persistentZone.triggers.enter.requiredAbsentStatuses" },
+    ownerDocument: {
+      createElement: () => ({
+        dataset: {},
+        remove() {
+          const index = values.indexOf(this);
+          if (index >= 0) values.splice(index, 1);
+        }
+      })
+    },
+    append(input) { values.push(input); },
+    querySelectorAll: () => values
+  };
+  assert.equal(addPersistentZoneStatusGuardValue(group, "restrained"), true);
+  assert.equal(addPersistentZoneStatusGuardValue(group, "restrained"), false, "a selected status is not added twice");
+  assert.deepEqual(readPersistentZoneStatusGuardValues(group), ["restrained"]);
+  assert.equal(removePersistentZoneStatusGuardValue(group, "restrained"), true);
+  assert.deepEqual(readPersistentZoneStatusGuardValues(group), []);
+  assert.equal(removePersistentZoneStatusGuardValue(group, "restrained"), false);
+});
+
+test("Web status guards survive an Activity UI merge without changing their technical values", () => {
+  const web = structuredClone(getPersistentZonePreset("srd-5.2.1.web").persistentZone);
+  const saved = normalizePersistentZoneActivitySubmitData(
+    mergePersistentZoneActivitySubmitData(web, {
+      triggers: {
+        turnStart: {
+          requiredAbsentSourceStatuses: ["restrained"],
+          requiredAbsentStatuses: []
+        }
+      }
+    })
+  );
+  assert.deepEqual(saved.triggers.turnStart.requiredAbsentSourceStatuses, ["restrained"]);
+  assert.deepEqual(saved.triggers.turnStart.requiredAbsentStatuses, []);
+  assert.equal(saved.triggers.enter.requiredAbsentSourceStatuses.length, 0);
+  assert.equal(saved.triggers.turnStart.frequencyGroup, "web-restrain");
+});
+
+test("Activity Sheet exposes Web's source-scoped status guard with localized status choices", () => {
+  const sheet = new PersistentZoneActivitySheet();
+  sheet.activity = {
+    _source: { persistentZone: structuredClone(getPersistentZonePreset("srd-5.2.1.web").persistentZone) }
+  };
+  const context = sheet._preparePersistentZoneContext({ tabs: { persistentZone: {} } });
+  const turnStart = context.persistentZoneTriggerRows.find((row) => row.timing === "turnStart");
+  assert.equal(turnStart.hasRequiredAbsentSourceStatuses, true);
+  assert.equal(turnStart.hasRequiredAbsentStatuses, false);
+  assert.equal(turnStart.requiredAbsentSourceStatusOptions.find((option) => option.value === "restrained")?.selected, true);
+  assert.equal(turnStart.requiredAbsentSourceStatusOptions.find((option) => option.value === "restrained")?.label, "Restrained");
+  assert.deepEqual(turnStart.requiredAbsentSourceStatusTags.map((status) => status.label), ["Restrained"]);
+  assert.deepEqual(turnStart.requiredAbsentStatusTags, []);
+  assert.equal(turnStart.requiredAbsentStatusOptions.find((option) => option.value === "prone")?.selected, false);
+  assert.ok(turnStart.advancedConditionsSummary, "a configured guard produces a collapsed summary");
+});
+
+test("empty legacy status guard controls do not add guard arrays during an unrelated UI submit", () => {
+  const submitData = { persistentZone: { triggers: { enter: {} } } };
+  applyExplicitPersistentZoneStatusGuardStates(submitData, {
+    querySelectorAll: () => [{
+      dataset: {
+        pzStatusGuardPath: "persistentZone.triggers.enter.requiredAbsentStatuses",
+        pzStatusGuardHadValue: "false"
+      },
+      querySelectorAll: () => []
+    }]
+  });
+  assert.equal(Object.hasOwn(submitData.persistentZone.triggers.enter, "requiredAbsentStatuses"), false);
 });
 
 test("generic partial merge preserves inactive native cone and ray dimensions", () => {

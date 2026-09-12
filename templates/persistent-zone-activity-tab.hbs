@@ -56,7 +56,7 @@
       <p class="hint persistent-zone-activity__section-hint">{{localize "PERSISTENT_ZONES.Activity.Help.Parts"}}</p>
       <div class="persistent-zone-activity__part-list">
         {{#each persistentZonePartRows as |partRow|}}
-          <details class="persistent-zone-activity__part-card" data-pz-part-id="{{partRow.id}}" open>
+          <details class="persistent-zone-activity__part-card" data-pz-part-id="{{partRow.id}}" data-pz-disclosure-id="part:{{partRow.id}}" open>
             <summary>{{localize "PERSISTENT_ZONES.Activity.Parts.Part"}} {{partRow.number}} — {{partRow.label}}</summary>
             <div class="persistent-zone-activity__part-content">
               <input type="hidden" name="persistentZone.parts.{{partRow.index}}.id" value="{{partRow.id}}">
@@ -157,7 +157,7 @@
                 </select>
               </div>
               {{/if}}
-              <details class="persistent-zone-activity__part-trigger-section" data-pz-part-trigger-section>
+              <details class="persistent-zone-activity__part-trigger-section" data-pz-part-trigger-section data-pz-disclosure-id="part:{{partRow.id}}:triggers">
                 <summary class="persistent-zone-activity__part-subtitle persistent-zone-activity__part-subtitle--triggers">
                   <span class="persistent-zone-activity__trigger-summary-title">{{localize "PERSISTENT_ZONES.Activity.Sections.Triggers"}}</span>
                   <span class="persistent-zone-activity__trigger-summary-lines" data-pz-part-trigger-summary-lines>
@@ -324,7 +324,7 @@
     <legend>{{localize "PERSISTENT_ZONES.Activity.Sections.Triggers"}}</legend>
     <p class="hint persistent-zone-activity__section-hint">{{localize "PERSISTENT_ZONES.Activity.Help.TriggersSingle"}}</p>
     {{#each persistentZoneTriggerRows as |triggerRow|}}
-      <details class="persistent-zone-activity__trigger" data-pz-trigger="{{triggerRow.timing}}">
+      <details class="persistent-zone-activity__trigger" data-pz-trigger="{{triggerRow.timing}}" data-pz-disclosure-id="trigger:{{triggerRow.timing}}">
         <summary class="persistent-zone-activity__trigger-summary">
           <span class="persistent-zone-activity__trigger-summary-title">{{triggerRow.label}}</span>
           <span class="persistent-zone-activity__trigger-summary-line">{{triggerRow.summary}}</span>
@@ -372,6 +372,45 @@
             <input type="text" name="persistentZone.triggers.{{triggerRow.timing}}.frequencyGroup" value="{{triggerRow.state.frequencyGroup}}">
             <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.TriggerFrequencyGroup"}}</p>
           </div>
+
+          <details class="persistent-zone-activity__advanced-conditions" data-pz-disclosure-id="trigger:{{triggerRow.timing}}:advanced-conditions">
+            <summary>
+              <span>{{localize "PERSISTENT_ZONES.Activity.Sections.AdvancedConditions"}}</span>
+              {{#if triggerRow.advancedConditionsSummary}}<span class="persistent-zone-activity__advanced-conditions-summary">{{triggerRow.advancedConditionsSummary}}</span>{{/if}}
+            </summary>
+            <fieldset class="persistent-zone-activity__status-guard" data-pz-status-guard data-pz-status-guard-path="persistentZone.triggers.{{triggerRow.timing}}.requiredAbsentStatuses" data-pz-status-guard-had-value="{{#if triggerRow.hasRequiredAbsentStatuses}}true{{else}}false{{/if}}">
+              <legend>{{localize "PERSISTENT_ZONES.Activity.Fields.RequiredAbsentStatuses"}}</legend>
+              <div class="persistent-zone-activity__status-guard-tags">
+                {{#each triggerRow.requiredAbsentStatusTags as |status|}}
+                  <span class="persistent-zone-activity__status-guard-tag">{{status.label}} <button type="button" data-pz-status-guard-remove="{{status.value}}" aria-label="{{localize "PERSISTENT_ZONES.Activity.Fields.RemoveStatus"}}">×</button></span>
+                {{/each}}
+              </div>
+              {{#each triggerRow.requiredAbsentStatusTags as |status|}}<input type="hidden" name="persistentZone.triggers.{{../timing}}.requiredAbsentStatuses" value="{{status.value}}" data-pz-status-guard-value>{{/each}}
+              <select data-pz-status-guard-add>
+                <option value="">{{localize "PERSISTENT_ZONES.Activity.Fields.AddStatus"}}</option>
+                {{#each triggerRow.requiredAbsentStatusOptions as |option|}}
+                  {{#unless option.selected}}<option value="{{option.value}}">{{option.label}}</option>{{/unless}}
+                {{/each}}
+              </select>
+              <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.RequiredAbsentStatuses"}}</p>
+            </fieldset>
+            <fieldset class="persistent-zone-activity__status-guard" data-pz-status-guard data-pz-status-guard-path="persistentZone.triggers.{{triggerRow.timing}}.requiredAbsentSourceStatuses" data-pz-status-guard-had-value="{{#if triggerRow.hasRequiredAbsentSourceStatuses}}true{{else}}false{{/if}}">
+              <legend>{{localize "PERSISTENT_ZONES.Activity.Fields.RequiredAbsentSourceStatuses"}}</legend>
+              <div class="persistent-zone-activity__status-guard-tags">
+                {{#each triggerRow.requiredAbsentSourceStatusTags as |status|}}
+                  <span class="persistent-zone-activity__status-guard-tag">{{status.label}} <button type="button" data-pz-status-guard-remove="{{status.value}}" aria-label="{{localize "PERSISTENT_ZONES.Activity.Fields.RemoveStatus"}}">×</button></span>
+                {{/each}}
+              </div>
+              {{#each triggerRow.requiredAbsentSourceStatusTags as |status|}}<input type="hidden" name="persistentZone.triggers.{{../timing}}.requiredAbsentSourceStatuses" value="{{status.value}}" data-pz-status-guard-value>{{/each}}
+              <select data-pz-status-guard-add>
+                <option value="">{{localize "PERSISTENT_ZONES.Activity.Fields.AddStatus"}}</option>
+                {{#each triggerRow.requiredAbsentSourceStatusOptions as |option|}}
+                  {{#unless option.selected}}<option value="{{option.value}}">{{option.label}}</option>{{/unless}}
+                {{/each}}
+              </select>
+              <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.RequiredAbsentSourceStatuses"}}</p>
+            </fieldset>
+          </details>
 
           <fieldset class="persistent-zone-activity__trigger-effects">
             <legend>{{localize "PERSISTENT_ZONES.Activity.Sections.Effects"}}</legend>

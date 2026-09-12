@@ -37,6 +37,7 @@ export class PersistentZoneActivitySheet extends dnd5e.applications.activity.Act
   #openMultipartTriggerPartIds = new Set();
   #multipartPartOpenState = new Map();
   #openTriggerTimings = new Set();
+  #openDisclosureIds = new Set();
   #selectedPresetId = "";
 
   async _preparePartContext(partId, context, options) {
@@ -130,7 +131,13 @@ export class PersistentZoneActivitySheet extends dnd5e.applications.activity.Act
     this.element?.querySelectorAll?.(".persistent-zone-activity")?.forEach((root) => {
       orderPersistentZoneActivitySections(root);
       updateConditionalVisibility(root);
+      restorePersistentZoneDisclosureState(root, this.#openDisclosureIds);
       restoreTriggerOpenState(root, this.#openTriggerTimings);
+      root.querySelectorAll("details[data-pz-disclosure-id]").forEach((disclosure) => {
+        disclosure.addEventListener("toggle", () => {
+          capturePersistentZoneDisclosureState(root, this.#openDisclosureIds);
+        });
+      });
       root.querySelectorAll("details[data-pz-trigger]").forEach((trigger) => {
         trigger.addEventListener("toggle", () => {
           const timing = trigger.dataset.pzTrigger;
@@ -168,6 +175,7 @@ export class PersistentZoneActivitySheet extends dnd5e.applications.activity.Act
         }
         this.#persistentZoneViewportState = capturePersistentZoneViewportState(root, event);
         this.#openTriggerTimings = captureTriggerOpenState(root);
+        capturePersistentZoneDisclosureState(root, this.#openDisclosureIds);
         const trigger = event.target?.closest?.("details[data-pz-trigger]");
         if (trigger?.dataset?.pzTrigger && event.target?.matches?.("input[type='checkbox'][name$='.enabled']") && event.target.checked) {
           this.#openTriggerTimings.add(trigger.dataset.pzTrigger);
@@ -182,6 +190,7 @@ export class PersistentZoneActivitySheet extends dnd5e.applications.activity.Act
       root.addEventListener("input", (event) => {
         this.#persistentZoneViewportState = capturePersistentZoneViewportState(root, event);
         this.#openTriggerTimings = captureTriggerOpenState(root);
+        capturePersistentZoneDisclosureState(root, this.#openDisclosureIds);
         this.#pendingMultipartFieldPatch = captureMultipartFieldPatch(event) ?? this.#pendingMultipartFieldPatch;
         updateConditionalVisibility(root);
       });
@@ -220,6 +229,7 @@ export class PersistentZoneActivitySheet extends dnd5e.applications.activity.Act
         );
         if (!confirmed) return;
         this.#openTriggerTimings = captureTriggerOpenState(root);
+        capturePersistentZoneDisclosureState(root, this.#openDisclosureIds);
         const targetTemplate = buildTargetTemplateFromPersistentZoneConfig(preset.persistentZone, this.activity);
         await applyPresetToActivity(this.activity, preset, {
           activityUpdates: {
@@ -239,6 +249,7 @@ export class PersistentZoneActivitySheet extends dnd5e.applications.activity.Act
       root.querySelector("[data-pz-ensure-controlled-movement]")?.addEventListener("click", async (event) => {
         event.preventDefault();
         this.#openTriggerTimings = captureTriggerOpenState(root);
+        capturePersistentZoneDisclosureState(root, this.#openDisclosureIds);
         const config = readControlledMovementFromSheet(root, this.activity?._source?.[ACTIVITY_DEFINITION_FIELD_KEY] ??
           this.activity?.[ACTIVITY_DEFINITION_FIELD_KEY]);
         if (!config.enabled) return;
@@ -265,6 +276,28 @@ export class PersistentZoneActivitySheet extends dnd5e.applications.activity.Act
         const companion = findControlledMovementCompanion(this.activity);
         if (!companion?.sheet?.render) return;
         await companion.sheet.render({ force: true });
+      });
+      root.querySelectorAll("[data-pz-status-guard-add]").forEach((select) => {
+        select.addEventListener("change", (event) => {
+          const statusId = String(event.currentTarget?.value ?? "").trim();
+          const group = event.currentTarget?.closest?.("[data-pz-status-guard]");
+          if (!group || !statusId) return;
+          addPersistentZoneStatusGuardValue(group, statusId);
+          event.currentTarget.value = "";
+          capturePersistentZoneDisclosureState(root, this.#openDisclosureIds);
+          requestPersistentZoneFormSubmit(root, this);
+        });
+      });
+      root.querySelectorAll("[data-pz-status-guard-remove]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          const group = event.currentTarget?.closest?.("[data-pz-status-guard]");
+          const statusId = String(event.currentTarget?.dataset?.pzStatusGuardRemove ?? "").trim();
+          if (!group || !statusId) return;
+          removePersistentZoneStatusGuardValue(group, statusId);
+          capturePersistentZoneDisclosureState(root, this.#openDisclosureIds);
+          requestPersistentZoneFormSubmit(root, this);
+        });
       });
     });
     restorePersistentZoneViewportState(this.element, this.#persistentZoneViewportState);
@@ -318,6 +351,7 @@ export class PersistentZoneActivitySheet extends dnd5e.applications.activity.Act
     const submitData = super._prepareSubmitData(event, formData);
     const root = this.element?.querySelector?.(".persistent-zone-activity");
     applyExplicitPersistentZoneCheckboxStates(submitData, root);
+    applyExplicitPersistentZoneStatusGuardStates(submitData, root);
     return submitData;
   }
 }
@@ -327,6 +361,52 @@ export function applyExplicitPersistentZoneCheckboxStates(submitData, root) {
     foundry.utils.setProperty(submitData, checkbox.name, checkbox.checked === true);
   });
   return submitData;
+}
+
+/**
+ * A multi-select with no selected options is omitted from FormData. Record an
+ * explicit empty array so removing every guard is a real Activity update,
+ * rather than preserving the previous values during the normal PATCH merge.
+ */
+export function applyExplicitPersistentZoneStatusGuardStates(submitData, root) {
+  root?.querySelectorAll?.("[data-pz-status-guard]")?.forEach((group) => {
+    const path = String(group.dataset?.pzStatusGuardPath ?? "").trim();
+    if (!path.startsWith("persistentZone.")) return;
+    const values = readPersistentZoneStatusGuardValues(group);
+    if (!values.length && group.dataset?.pzStatusGuardHadValue !== "true") return;
+    foundry.utils.setProperty(submitData, path, values);
+  });
+  return submitData;
+}
+
+export function readPersistentZoneStatusGuardValues(group) {
+  return Array.from(group?.querySelectorAll?.("[data-pz-status-guard-value]") ?? [])
+    .map((input) => String(input.value ?? "").trim())
+    .filter(Boolean);
+}
+
+export function addPersistentZoneStatusGuardValue(group, statusId) {
+  const value = String(statusId ?? "").trim();
+  if (!value || readPersistentZoneStatusGuardValues(group).some((entry) => entry.toLowerCase() === value.toLowerCase())) {
+    return false;
+  }
+  const input = group?.ownerDocument?.createElement?.("input");
+  if (!input) return false;
+  input.type = "hidden";
+  input.dataset.pzStatusGuardValue = "";
+  input.value = value;
+  input.name = String(group.dataset?.pzStatusGuardPath ?? "");
+  group.append(input);
+  return true;
+}
+
+export function removePersistentZoneStatusGuardValue(group, statusId) {
+  const value = String(statusId ?? "").trim().toLowerCase();
+  const input = Array.from(group?.querySelectorAll?.("[data-pz-status-guard-value]") ?? [])
+    .find((entry) => String(entry.value ?? "").trim().toLowerCase() === value);
+  if (!input) return false;
+  input.remove?.();
+  return true;
 }
 
 export function mergePersistentZoneActivitySubmitData(existingDefinition, submittedDefinition) {
@@ -1570,6 +1650,13 @@ function buildTriggerRows(triggers = {}, activity = null, { controlledMovementEn
       state: { ...state, targeting },
       allowsWhileInside: timing !== "exit",
       targetingOptions: buildTriggerTargetingOptions(timing, targeting.mode, { controlledMovementEnabled }),
+      requiredAbsentStatusOptions: buildGuardStatusOptions(state.requiredAbsentStatuses),
+      requiredAbsentSourceStatusOptions: buildGuardStatusOptions(state.requiredAbsentSourceStatuses),
+      requiredAbsentStatusTags: buildStatusGuardTags(state.requiredAbsentStatuses),
+      requiredAbsentSourceStatusTags: buildStatusGuardTags(state.requiredAbsentSourceStatuses),
+      hasRequiredAbsentStatuses: normalizeStatusIdList(state.requiredAbsentStatuses).length > 0,
+      hasRequiredAbsentSourceStatuses: normalizeStatusIdList(state.requiredAbsentSourceStatuses).length > 0,
+      advancedConditionsSummary: buildAdvancedConditionsSummary(state),
       summary: buildTriggerRowSummary(state, targeting, unitLabel),
       linkedActivityOptions: buildLinkedActivityOptions(activity, state.linkedActivity?.id)
     };
@@ -1753,7 +1840,7 @@ function buildStatusOptions() {
     { value: "", label: "PERSISTENT_ZONES.Activity.Statuses.None" },
     ...statuses.map((status) => ({
       value: status.id,
-      label: game.i18n?.localize?.(status.name ?? status.label ?? status.id) ?? status.id
+      label: game.i18n?.localize?.(status.name ?? status.label ?? status.id) ?? status.name ?? status.label ?? status.id
     }))
   ];
 }
@@ -1897,6 +1984,40 @@ function updateConditionalVisibility(root) {
       field.hidden = !enabled || field.dataset.pzStatusEscapeCheck !== checkType;
     });
   });
+}
+
+function buildGuardStatusOptions(selectedStatusIds = []) {
+  const selected = new Set(normalizeStatusIdList(selectedStatusIds));
+  return (CONFIG.statusEffects ?? []).map((status) => {
+    const value = String(status.id ?? "").trim();
+    const rawLabel = status.name ?? status.label ?? value;
+    return {
+      value,
+      label: game.i18n?.localize?.(rawLabel) ?? rawLabel,
+      selected: selected.has(value.toLowerCase())
+    };
+  }).filter((status) => status.value);
+}
+
+function buildStatusGuardTags(selectedStatusIds = []) {
+  return buildGuardStatusOptions(selectedStatusIds).filter((status) => status.selected);
+}
+
+function buildAdvancedConditionsSummary(trigger = {}) {
+  const fragments = [];
+  const targetStatuses = normalizeStatusIdList(trigger.requiredAbsentStatuses);
+  const sourceStatuses = normalizeStatusIdList(trigger.requiredAbsentSourceStatuses);
+  if (targetStatuses.length) {
+    fragments.push(formatLocalization("PERSISTENT_ZONES.Activity.AdvancedConditions.TargetSummary", {
+      statuses: targetStatuses.map(resolveStatusLabel).join(", ")
+    }));
+  }
+  if (sourceStatuses.length) {
+    fragments.push(formatLocalization("PERSISTENT_ZONES.Activity.AdvancedConditions.SourceSummary", {
+      statuses: sourceStatuses.map(resolveStatusLabel).join(", ")
+    }));
+  }
+  return fragments.join(" • ");
 }
 
 export function buildMultipartTriggerSummary(triggerRows = []) {
@@ -2055,6 +2176,31 @@ export function restoreTriggerOpenState(root, openTimings = new Set()) {
   triggers.forEach((trigger) => {
     const timing = String(trigger.dataset?.pzTrigger ?? "").trim();
     trigger.open = Boolean(timing && openTimings.has(timing));
+  });
+}
+
+/** Keep every stable Activity-sheet disclosure open state on the Sheet instance only. */
+export function capturePersistentZoneDisclosureState(root, openIds = new Set()) {
+  const disclosures = Array.from(root?.querySelectorAll?.("details[data-pz-disclosure-id]") ?? []);
+  const renderedIds = new Set(disclosures
+    .map((disclosure) => String(disclosure.dataset?.pzDisclosureId ?? "").trim())
+    .filter(Boolean));
+  for (const id of openIds) {
+    if (!renderedIds.has(id)) openIds.delete(id);
+  }
+  disclosures.forEach((disclosure) => {
+    const id = String(disclosure.dataset?.pzDisclosureId ?? "").trim();
+    if (!id) return;
+    if (disclosure.open) openIds.add(id);
+    else openIds.delete(id);
+  });
+  return openIds;
+}
+
+export function restorePersistentZoneDisclosureState(root, openIds = new Set()) {
+  Array.from(root?.querySelectorAll?.("details[data-pz-disclosure-id]") ?? []).forEach((disclosure) => {
+    const id = String(disclosure.dataset?.pzDisclosureId ?? "").trim();
+    disclosure.open = Boolean(id && openIds.has(id));
   });
 }
 
