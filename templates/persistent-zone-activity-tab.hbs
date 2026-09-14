@@ -279,14 +279,16 @@
     <div data-pz-geometry="circle emanation">
       <div class="form-group">
         <label>{{localize "PERSISTENT_ZONES.Activity.Fields.RadiusScaling"}}</label>
-        <select name="persistentZone.geometry.scaling.mode">
+        <select name="persistentZone.geometry.scaling.mode" data-pz-radius-scaling-mode>
           <option value="none" {{#if (eq persistentZone.geometry.scaling.mode "none")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.RadiusScaling.None"}}</option>
           <option value="per-level" {{#if (eq persistentZone.geometry.scaling.mode "per-level")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.RadiusScaling.PerLevel"}}</option>
         </select>
       </div>
-      <div class="form-group"><label>{{localize "PERSISTENT_ZONES.Activity.Fields.RadiusScalingBaseLevelMode"}}</label><select name="persistentZone.geometry.scaling.baseLevelMode"><option value="item" {{#if (eq persistentZone.geometry.scaling.baseLevelMode "item")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.RadiusScaling.ItemLevel"}}</option><option value="fixed" {{#if (eq persistentZone.geometry.scaling.baseLevelMode "fixed")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.RadiusScaling.FixedLevel"}}</option></select></div>
-      {{#if (eq persistentZone.geometry.scaling.baseLevelMode "fixed")}}<div class="form-group"><label>{{localize "PERSISTENT_ZONES.Activity.Fields.RadiusScalingBaseLevel"}}</label><input type="number" name="persistentZone.geometry.scaling.baseLevel" min="1" step="1" value="{{persistentZone.geometry.scaling.baseLevel}}"></div>{{/if}}
-      <div class="form-group"><label>{{localize "PERSISTENT_ZONES.Activity.Fields.RadiusScalingPerLevel"}}</label><input type="number" name="persistentZone.geometry.scaling.radiusPerLevel" min="0" step="any" value="{{persistentZone.geometry.scaling.radiusPerLevel}}"></div>
+      <div data-pz-radius-scaling-fields {{#unless (eq persistentZone.geometry.scaling.mode "per-level")}}hidden{{/unless}}>
+        <div class="form-group"><label>{{localize "PERSISTENT_ZONES.Activity.Fields.RadiusScalingBaseLevelMode"}}</label><select name="persistentZone.geometry.scaling.baseLevelMode"><option value="item" {{#if (eq persistentZone.geometry.scaling.baseLevelMode "item")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.RadiusScaling.ItemLevel"}}</option><option value="fixed" {{#if (eq persistentZone.geometry.scaling.baseLevelMode "fixed")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.RadiusScaling.FixedLevel"}}</option></select></div>
+        <div class="form-group" data-pz-radius-scaling-fixed-level {{#unless (eq persistentZone.geometry.scaling.baseLevelMode "fixed")}}hidden{{/unless}}><label>{{localize "PERSISTENT_ZONES.Activity.Fields.RadiusScalingBaseLevel"}}</label><input type="number" name="persistentZone.geometry.scaling.baseLevel" min="1" step="1" value="{{persistentZone.geometry.scaling.baseLevel}}"></div>
+        <div class="form-group"><label>{{localize "PERSISTENT_ZONES.Activity.Fields.RadiusScalingPerLevel"}} ({{persistentZoneGeometryUnitLabel}})</label><input type="number" name="persistentZone.geometry.scaling.radiusPerLevel" min="0" step="any" value="{{persistentZone.geometry.scaling.radiusPerLevel}}"></div>
+      </div>
     </div>
     <div class="persistent-zone-activity__part-subtitle">{{localize "PERSISTENT_ZONES.Activity.Elevation.Title"}}</div>
     <div class="form-group">

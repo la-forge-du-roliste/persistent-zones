@@ -449,6 +449,22 @@ const buildLinkedDistanceUnitsDebugPreset = () => base({
   linkedLights: { enabled: true, preset: "custom", bright: 20, dim: 40, max: 1, color: "#ffd88a" }
 });
 
+const buildRadiusScalingUiDebugPreset = () => base({
+  id: "debug.radius-scaling-ui",
+  name: "PERSISTENT_ZONES.Activity.Presets.Debug.RadiusScalingUi.Name",
+  description: "PERSISTENT_ZONES.Activity.Presets.Debug.RadiusScalingUi.Description",
+  category: "debug-tests",
+  geometry: {
+    type: "circle",
+    radius: 20,
+    units: "ft",
+    scaling: { mode: "per-level", baseLevelMode: "item", baseLevel: 1, radiusPerLevel: 20 }
+  },
+  obstacles: { mode: "unrestricted" },
+  terrain: { enabled: false, multiplier: 2 },
+  triggers: buildDisabledTriggers()
+});
+
 const buildTokenMembershipDebugPreset = () => base({
   id: "debug.token-membership-50",
   name: "PERSISTENT_ZONES.Activity.Presets.Debug.TokenMembership50.Name",
@@ -538,6 +554,7 @@ const buildRecoveryScalingDebugPreset = ({ id, name, description, recoveryType, 
 };
 
 export const BUILTIN_PRESETS = Object.freeze([
+  buildRadiusScalingUiDebugPreset(),
   buildLinkedDistanceUnitsDebugPreset(),
   buildMultipartUiScalingDebugPreset(),
   buildZoneTranslationDebugPreset(),

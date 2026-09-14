@@ -92,6 +92,9 @@ export class PersistentZoneActivitySheet extends dnd5e.applications.activity.Act
     context.persistentZoneAbilities = buildAbilityOptions(config?.save?.ability);
     context.persistentZoneSkills = buildSkillOptions();
     context.persistentZoneTemplateUnits = buildTemplateUnitOptions(context.source?.target?.template?.units);
+    context.persistentZoneGeometryUnitLabel = getConfiguredDistanceUnitLabel(
+      context.persistentZone?.geometry?.units
+    );
     context.persistentZoneWallPresets = buildLinkedWallPresetOptions(context.persistentZone.linkedWalls?.preset);
     context.persistentZoneLightPresets = buildLinkedLightPresetOptions(context.persistentZone.linkedLights?.preset);
     context.persistentZoneLinkedDistanceUnitLabel = getSceneDistanceUnitLabel();
@@ -1758,6 +1761,12 @@ function getSceneDistanceUnitLabel(scene = globalThis.canvas?.scene ?? null) {
   return sceneUnits === "m" ? "m" : sceneUnits === "ft" ? "ft" : String(scene?.grid?.units ?? "");
 }
 
+function getConfiguredDistanceUnitLabel(units, scene = globalThis.canvas?.scene ?? null) {
+  const configuredUnits = normalizeCanonicalDistanceUnit(units);
+  if (configuredUnits === "m" || configuredUnits === "ft") return configuredUnits;
+  return getSceneDistanceUnitLabel(scene);
+}
+
 function prepareTranslationForScene(value, scene = globalThis.canvas?.scene ?? null) {
   const config = normalizeUiTranslation(value);
   const sceneUnits = normalizeCanonicalDistanceUnit(scene?.grid?.units ?? scene?.grid?.unit);
@@ -1892,6 +1901,14 @@ function updateConditionalVisibility(root) {
     element.querySelectorAll("input, select, textarea, button").forEach((control) => {
       control.disabled = !applicable;
     });
+  });
+  const radiusScalingMode = root.querySelector("[name='persistentZone.geometry.scaling.mode']")?.value ?? "none";
+  root.querySelectorAll("[data-pz-radius-scaling-fields]").forEach((element) => {
+    setConditionalControls(element, radiusScalingMode === "per-level");
+  });
+  const radiusBaseLevelMode = root.querySelector("[name='persistentZone.geometry.scaling.baseLevelMode']")?.value ?? "item";
+  root.querySelectorAll("[data-pz-radius-scaling-fixed-level]").forEach((element) => {
+    setConditionalControls(element, radiusScalingMode === "per-level" && radiusBaseLevelMode === "fixed");
   });
   root.querySelectorAll("[data-pz-linked-wall-geometry]").forEach((element) => {
     element.hidden = geometry !== "wall";

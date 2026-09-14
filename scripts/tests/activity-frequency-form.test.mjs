@@ -427,6 +427,8 @@ test("Difficult Terrain and trigger summary copy is localized in EN and FR", () 
   assert.equal(fr.PERSISTENT_ZONES.Activity.Presets.Debug.MultipartUiScaling.Name, "Debug/Test — Multipart UI et scaling");
   assert.equal(en.PERSISTENT_ZONES.Activity.Presets.Debug.LinkedDistanceUnits.Name, "Debug/Test — Linked Wall and Light Units");
   assert.equal(fr.PERSISTENT_ZONES.Activity.Presets.Debug.LinkedDistanceUnits.Name, "Debug/Test — Unités des murs et lumières");
+  assert.equal(en.PERSISTENT_ZONES.Activity.Presets.Debug.RadiusScalingUi.Name, "Debug/Test — Radius Scaling");
+  assert.equal(fr.PERSISTENT_ZONES.Activity.Presets.Debug.RadiusScalingUi.Name, "Debug/Test — Scaling du rayon");
   assert.equal(en.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentStatuses, "Affected Creature Statuses");
   assert.equal(fr.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentStatuses, "Statuts de la créature affectée");
   assert.equal(en.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentSourceStatuses, "Statuses Already Applied by This Zone");
@@ -457,6 +459,27 @@ test("linked wall and light distance controls display the active scene unit", ()
     assert.equal(context.persistentZoneLinkedDistanceUnitLabel, "m");
     const template = fs.readFileSync(new URL("../../templates/persistent-zone-activity-tab.hbs", import.meta.url), "utf8");
     assert.equal((template.match(/persistentZoneLinkedDistanceUnitLabel/g) ?? []).length, 6);
+  } finally {
+    globalThis.canvas.scene = previousScene;
+  }
+});
+
+test("radius scaling UI hides inactive options and labels its increment with the configured unit", () => {
+  const previousScene = globalThis.canvas.scene;
+  globalThis.canvas.scene = { grid: { units: "m", distance: 1.5, size: 100 } };
+  try {
+    const preset = getPersistentZonePreset("debug.radius-scaling-ui");
+    const sheet = new PersistentZoneActivitySheet();
+    sheet.activity = {
+      _source: { persistentZone: structuredClone(preset.persistentZone) },
+      item: { system: { activities: new Map() } }
+    };
+    const context = sheet._preparePersistentZoneContext({ tabs: { persistentZone: {} } });
+    assert.equal(context.persistentZoneGeometryUnitLabel, "ft");
+    const template = fs.readFileSync(new URL("../../templates/persistent-zone-activity-tab.hbs", import.meta.url), "utf8");
+    assert.match(template, /data-pz-radius-scaling-fields/);
+    assert.match(template, /data-pz-radius-scaling-fixed-level/);
+    assert.match(template, /RadiusScalingPerLevel[^\n]+persistentZoneGeometryUnitLabel/);
   } finally {
     globalThis.canvas.scene = previousScene;
   }
