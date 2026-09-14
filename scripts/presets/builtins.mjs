@@ -282,7 +282,7 @@ const wallOfFireLinkedLights = {
   color: "#ff9b42"
 };
 
-const base = ({ id, name, description, category, geometry, elevation = null, obstacles = null, obscuration = null, parts = [], triggers = buildDisabledTriggers(), movement = null, translation = null, controlledMovement = null, terrain = { enabled: false, multiplier: 2 }, placement = null }) => ({
+const base = ({ id, name, description, category, geometry, elevation = null, obstacles = null, obscuration = null, parts = [], triggers = buildDisabledTriggers(), movement = null, translation = null, controlledMovement = null, terrain = { enabled: false, multiplier: 2 }, placement = null, linkedWalls = null, linkedLights = null }) => ({
   id,
   version: PRESET_SCHEMA_VERSION,
   source: "builtin",
@@ -305,8 +305,8 @@ const base = ({ id, name, description, category, geometry, elevation = null, obs
     ...(translation ? { translation } : {}),
     ...(controlledMovement ? { controlledMovement } : {}),
     terrain,
-    linkedWalls: { enabled: false, preset: "solid", geometry: "centerline" },
-    linkedLights: { enabled: false, preset: "glow", bright: null, dim: null, max: 24, color: "#ffd88a" },
+    linkedWalls: linkedWalls ?? { enabled: false, preset: "solid", geometry: "centerline" },
+    linkedLights: linkedLights ?? { enabled: false, preset: "glow", bright: null, dim: null, max: 24, color: "#ffd88a" },
     lifecycle: { useDedicatedOwnerEffect: true }
   }
 });
@@ -436,6 +436,19 @@ const buildMultipartUiScalingDebugPreset = () => base({
   ]
 });
 
+const buildLinkedDistanceUnitsDebugPreset = () => base({
+  id: "debug.linked-distance-units-ui",
+  name: "PERSISTENT_ZONES.Activity.Presets.Debug.LinkedDistanceUnits.Name",
+  description: "PERSISTENT_ZONES.Activity.Presets.Debug.LinkedDistanceUnits.Description",
+  category: "debug-tests",
+  geometry: { type: "circle", radius: 10, units: "ft" },
+  obstacles: { mode: "unrestricted" },
+  terrain: { enabled: false, multiplier: 2 },
+  triggers: buildDisabledTriggers(),
+  linkedWalls: { enabled: true, preset: "solid", geometry: "perimeter", height: 20 },
+  linkedLights: { enabled: true, preset: "custom", bright: 20, dim: 40, max: 1, color: "#ffd88a" }
+});
+
 const buildTokenMembershipDebugPreset = () => base({
   id: "debug.token-membership-50",
   name: "PERSISTENT_ZONES.Activity.Presets.Debug.TokenMembership50.Name",
@@ -525,6 +538,7 @@ const buildRecoveryScalingDebugPreset = ({ id, name, description, recoveryType, 
 };
 
 export const BUILTIN_PRESETS = Object.freeze([
+  buildLinkedDistanceUnitsDebugPreset(),
   buildMultipartUiScalingDebugPreset(),
   buildZoneTranslationDebugPreset(),
   buildControlledMovementDebugPreset(),

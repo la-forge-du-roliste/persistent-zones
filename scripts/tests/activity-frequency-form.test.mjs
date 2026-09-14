@@ -425,6 +425,8 @@ test("Difficult Terrain and trigger summary copy is localized in EN and FR", () 
   assert.equal(fr.PERSISTENT_ZONES.Activity.Fields.AddStatus, "Ajouter un statut…");
   assert.equal(en.PERSISTENT_ZONES.Activity.Presets.Debug.MultipartUiScaling.Name, "Debug/Test — Multipart UI and Scaling");
   assert.equal(fr.PERSISTENT_ZONES.Activity.Presets.Debug.MultipartUiScaling.Name, "Debug/Test — Multipart UI et scaling");
+  assert.equal(en.PERSISTENT_ZONES.Activity.Presets.Debug.LinkedDistanceUnits.Name, "Debug/Test — Linked Wall and Light Units");
+  assert.equal(fr.PERSISTENT_ZONES.Activity.Presets.Debug.LinkedDistanceUnits.Name, "Debug/Test — Unités des murs et lumières");
   assert.equal(en.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentStatuses, "Affected Creature Statuses");
   assert.equal(fr.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentStatuses, "Statuts de la créature affectée");
   assert.equal(en.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentSourceStatuses, "Statuses Already Applied by This Zone");
@@ -443,6 +445,21 @@ test("Difficult Terrain and trigger summary copy is localized in EN and FR", () 
   assert.equal(fr.PERSISTENT_ZONES.Activity.AutomaticMovement.AwayFromSource, "S’éloigner de la source");
   assert.equal(en.PERSISTENT_ZONES.Activity.Help.TriggerTargetingPhysicalContact, "Detects the first creature touched by the zone's physical body while it moves.");
   assert.equal(fr.PERSISTENT_ZONES.Activity.Help.TriggerTargetingProximity, "Détecte les créatures dont le bord se trouve à la distance indiquée du bord de la zone.");
+});
+
+test("linked wall and light distance controls display the active scene unit", () => {
+  const previousScene = globalThis.canvas.scene;
+  globalThis.canvas.scene = { grid: { units: "m", distance: 1.5, size: 100 } };
+  try {
+    const sheet = new PersistentZoneActivitySheet();
+    sheet.activity = { _source: { persistentZone: {} }, item: { system: { activities: new Map() } } };
+    const context = sheet._preparePersistentZoneContext({ tabs: { persistentZone: {} } });
+    assert.equal(context.persistentZoneLinkedDistanceUnitLabel, "m");
+    const template = fs.readFileSync(new URL("../../templates/persistent-zone-activity-tab.hbs", import.meta.url), "utf8");
+    assert.equal((template.match(/persistentZoneLinkedDistanceUnitLabel/g) ?? []).length, 6);
+  } finally {
+    globalThis.canvas.scene = previousScene;
+  }
 });
 
 test("Controlled Movement displays a linked Activity name, never its technical identifier", () => {

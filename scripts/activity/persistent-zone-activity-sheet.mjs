@@ -94,6 +94,7 @@ export class PersistentZoneActivitySheet extends dnd5e.applications.activity.Act
     context.persistentZoneTemplateUnits = buildTemplateUnitOptions(context.source?.target?.template?.units);
     context.persistentZoneWallPresets = buildLinkedWallPresetOptions(context.persistentZone.linkedWalls?.preset);
     context.persistentZoneLightPresets = buildLinkedLightPresetOptions(context.persistentZone.linkedLights?.preset);
+    context.persistentZoneLinkedDistanceUnitLabel = getSceneDistanceUnitLabel();
     context.persistentZoneStatusOptions = buildStatusOptions();
     context.persistentZoneLinkedActivityOptions = buildLinkedActivityOptions(this.activity);
     const rawParts = Array.isArray(config?.parts) ? foundry.utils.deepClone(config.parts) : [];
@@ -1750,6 +1751,11 @@ function prepareControlledMovementForScene(value, scene = globalThis.canvas?.sce
     units: sceneUnits,
     unitLabel: sceneUnits === "m" ? "m" : sceneUnits === "ft" ? "ft" : String(scene?.grid?.units ?? "")
   };
+}
+
+function getSceneDistanceUnitLabel(scene = globalThis.canvas?.scene ?? null) {
+  const sceneUnits = normalizeCanonicalDistanceUnit(scene?.grid?.units ?? scene?.grid?.unit);
+  return sceneUnits === "m" ? "m" : sceneUnits === "ft" ? "ft" : String(scene?.grid?.units ?? "");
 }
 
 function prepareTranslationForScene(value, scene = globalThis.canvas?.scene ?? null) {

@@ -17,7 +17,7 @@ import {
 globalThis.foundry ??= { utils: { deepClone: structuredClone } };
 
 test("accepts versioned built-in presets", () => {
-  assert.equal(BUILTIN_PRESETS.length, 37);
+  assert.equal(BUILTIN_PRESETS.length, 38);
   for (const candidate of BUILTIN_PRESETS) {
     const preset = normalizePreset(candidate);
     assert.ok(preset);
@@ -304,7 +304,7 @@ test("replacement removes every stale mono and multipart setting", async () => {
 test("visible library separates validated SRD and debug movement-cost presets", () => {
   const ids = getBuiltinPersistentZonePresets().map(({ id }) => id).sort();
   assert.deepEqual(ids, [
-    "debug.controlled-zone-movement", "debug.damage-scaling-3d8", "debug.damage-scaling-constant", "debug.healing-scaling", "debug.midi-qol-resolution",
+    "debug.controlled-zone-movement", "debug.damage-scaling-3d8", "debug.damage-scaling-constant", "debug.healing-scaling", "debug.linked-distance-units-ui", "debug.midi-qol-resolution",
     "debug.movement-cost-x2", "debug.movement-cost-x4", "debug.movement-cost-x4-walls", "debug.multipart-ui-scaling", "debug.native-resolution", "debug.physical-contact-proximity", "debug.rectangle-walls", "debug.rectangle-walls-terrain", "debug.temporary-hit-points-scaling",
     "debug.terrain-x4-allies", "debug.terrain-x4-enemies", "debug.terrain-x4-enemies-walls", "debug.terrain-x4-others", "debug.terrain-x4-self", "debug.token-membership-50", "debug.zone-translation",
     "srd-5.2.1.black-tentacles", "srd-5.2.1.cloudkill", "srd-5.2.1.entangle", "srd-5.2.1.flaming-sphere", "srd-5.2.1.fog-cloud", "srd-5.2.1.grease",
@@ -315,12 +315,27 @@ test("visible library separates validated SRD and debug movement-cost presets", 
   for (const id of [
     "debug.damage-scaling-3d8", "debug.damage-scaling-constant", "debug.healing-scaling", "debug.midi-qol-resolution", "debug.temporary-hit-points-scaling",
     "debug.movement-cost-x2", "debug.movement-cost-x4", "debug.movement-cost-x4-walls", "debug.multipart-ui-scaling", "debug.native-resolution", "debug.physical-contact-proximity", "debug.rectangle-walls", "debug.rectangle-walls-terrain",
-    "debug.controlled-zone-movement", "debug.terrain-x4-allies", "debug.terrain-x4-enemies", "debug.terrain-x4-enemies-walls", "debug.terrain-x4-others", "debug.terrain-x4-self", "debug.token-membership-50", "debug.zone-translation"
+    "debug.controlled-zone-movement", "debug.linked-distance-units-ui", "debug.terrain-x4-allies", "debug.terrain-x4-enemies", "debug.terrain-x4-enemies-walls", "debug.terrain-x4-others", "debug.terrain-x4-self", "debug.token-membership-50", "debug.zone-translation"
   ]) {
     const preset = getPersistentZonePreset(id);
     assert.equal(preset.source, "builtin");
     assert.equal(preset.category, "debug-tests");
   }
+});
+
+test("linked distance units Debug/Test preset resolves wall and light distances for metric scenes", () => {
+  const preset = getPersistentZonePreset("debug.linked-distance-units-ui");
+  assert.equal(preset.category, "debug-tests");
+  assert.equal(preset.persistentZone.linkedWalls.height, 20);
+  assert.equal(preset.persistentZone.linkedLights.bright, 20);
+  assert.equal(preset.persistentZone.linkedLights.dim, 40);
+
+  const metric = resolvePresetPersistentZoneForScene(preset.persistentZone, {
+    grid: { units: "m", distance: 1.5, size: 100 }
+  });
+  assert.equal(metric.linkedWalls.height, 6);
+  assert.equal(metric.linkedLights.bright, 6);
+  assert.equal(metric.linkedLights.dim, 12);
 });
 
 test("token membership Debug/Test preset is visible and neutral", () => {
