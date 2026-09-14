@@ -8,6 +8,7 @@ import { claimTriggerFrequency } from "../runtime/trigger-frequency.mjs";
 import { normalizeZoneDefinition } from "../runtime/zone-definition.mjs";
 import { resolveLinkedLightConfig } from "../runtime/linked-presets.mjs";
 import { buildLinkedLightLayout } from "../runtime/linked-documents.mjs";
+import { resolveScaledFormula } from "../runtime/damage-scaling.mjs";
 
 globalThis.foundry ??= { utils: { deepClone: structuredClone } };
 globalThis.game ??= { version: "14.367", settings: { settings: new Map() } };
@@ -223,15 +224,19 @@ test("preset copies preserve edits to side, save, filters, frequency and linked 
 });
 
 function assertWallOfFireTriggers(preset) {
+  const expectedScaling = { mode: "per-level", baseLevelMode: "item", baseLevel: 4, perLevelFormula: "1d8" };
   const appearance = trigger(preset, "wall-body", "onCreate");
-  assert.deepEqual(appearance.simpleEffect.damage, { enabled: true, formula: "5d8", type: "fire" });
+  assert.deepEqual(appearance.simpleEffect.damage, { enabled: true, formula: "5d8", type: "fire", scaling: expectedScaling });
   assert.deepEqual(appearance.simpleEffect.save, { enabled: true, ability: "dex", dcMode: "inherit", dc: null, onSave: "half" });
   assert.equal(appearance.targetFilter.mode, "all");
   assert.equal(appearance.frequency, "unlimited");
 
   for (const [partId, timing] of [["wall-body", "enter"], ["wall-body", "turnEnd"], ["hot-side", "turnEnd"]]) {
     const config = trigger(preset, partId, timing);
-    assert.deepEqual(config.simpleEffect.damage, { enabled: true, formula: "5d8", type: "fire" });
+    assert.deepEqual(config.simpleEffect.damage, { enabled: true, formula: "5d8", type: "fire", scaling: expectedScaling });
+    assert.equal(resolveScaledFormula({ formula: config.simpleEffect.damage.formula, scaling: config.simpleEffect.damage.scaling, castLevel: 4, itemBaseLevel: 4 }).formula, "5d8");
+    assert.equal(resolveScaledFormula({ formula: config.simpleEffect.damage.formula, scaling: config.simpleEffect.damage.scaling, castLevel: 5, itemBaseLevel: 4 }).formula, "5d8 + (1d8)");
+    assert.equal(resolveScaledFormula({ formula: config.simpleEffect.damage.formula, scaling: config.simpleEffect.damage.scaling, castLevel: 6, itemBaseLevel: 4 }).formula, "5d8 + (1d8) + (1d8)");
     assert.equal(config.simpleEffect.save.enabled, false);
     assert.equal(config.frequency, "once-per-turn");
     assert.equal(config.frequencyGroup, timing === "enter" ? "wall-of-fire-enter" : "wall-of-fire-turn-end");

@@ -804,7 +804,7 @@ test("multipart UI Debug preset exposes independent summaries, guards, scaling, 
   assert.equal(endB.uiKey, "part-part-b-turnEnd");
   assert.deepEqual(enterA.requiredAbsentStatusTags.map(({ value }) => value), ["prone"]);
   assert.deepEqual(endB.requiredAbsentSourceStatusTags.map(({ value }) => value), ["restrained"]);
-  assert.equal(enterA.state.simpleEffect.damage.scaling.baseLevelMode, "item");
+  assert.equal(enterA.state.simpleEffect.damage.scaling.baseLevelMode, "fixed");
   assert.equal(endB.state.simpleEffect.healing.scaling.baseLevelMode, "fixed");
   assert.ok(enterA.summary);
   assert.ok(endB.summary);

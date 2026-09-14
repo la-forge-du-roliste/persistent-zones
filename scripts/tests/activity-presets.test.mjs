@@ -4,6 +4,7 @@ import test from "node:test";
 import { BUILTIN_PRESETS } from "../presets/builtins.mjs";
 import { getPersistentZoneActivityDefinition } from "../activity/persistent-zone-activity-utils.mjs";
 import { getBuiltinPersistentZonePresets, getPersistentZonePreset } from "../presets/preset-library.mjs";
+import { resolveScaledFormula } from "../runtime/damage-scaling.mjs";
 import {
   PRESET_SCHEMA_VERSION,
   applyPresetToActivity,
@@ -337,7 +338,7 @@ test("multipart UI scaling Debug/Test preset is ready to apply and preserves dis
   assert.equal(preset.persistentZone.parts.length, 2);
   const [partA, partB] = preset.persistentZone.parts;
   assert.deepEqual(partA.triggers.enter.simpleEffect.damage.scaling, {
-    mode: "per-level", baseLevelMode: "item", baseLevel: 1, perLevelFormula: "1d6"
+    mode: "per-level", baseLevelMode: "fixed", baseLevel: 1, perLevelFormula: "1d6"
   });
   assert.deepEqual(partA.triggers.enter.requiredAbsentStatuses, ["prone"]);
   assert.deepEqual(partB.triggers.turnEnd.simpleEffect.healing.scaling, {
@@ -354,8 +355,17 @@ test("multipart UI scaling Debug/Test preset is ready to apply and preserves dis
   } } }, preset, { scene: metric });
   assert.equal(persisted.parts.length, 2);
   assert.equal(persisted.parts[1].geometry.offsetEnd, 1.5);
-  assert.equal(persisted.parts[0].triggers.enter.simpleEffect.damage.scaling.baseLevelMode, "item");
+  assert.equal(persisted.parts[0].triggers.enter.simpleEffect.damage.scaling.baseLevelMode, "fixed");
   assert.equal(persisted.parts[1].triggers.turnEnd.simpleEffect.healing.scaling.baseLevelMode, "fixed");
+
+  const partADamage = persisted.parts[0].triggers.enter.simpleEffect.damage;
+  const partBHealing = persisted.parts[1].triggers.turnEnd.simpleEffect.healing;
+  assert.equal(resolveScaledFormula({ formula: partADamage.formula, scaling: partADamage.scaling, castLevel: 1 }).formula, "2d6");
+  assert.equal(resolveScaledFormula({ formula: partADamage.formula, scaling: partADamage.scaling, castLevel: 2 }).formula, "2d6 + (1d6)");
+  assert.equal(resolveScaledFormula({ formula: partADamage.formula, scaling: partADamage.scaling, castLevel: 3 }).formula, "2d6 + (1d6) + (1d6)");
+  assert.equal(resolveScaledFormula({ formula: partBHealing.formula, scaling: partBHealing.scaling, castLevel: 1 }).formula, "1d4");
+  assert.equal(resolveScaledFormula({ formula: partBHealing.formula, scaling: partBHealing.scaling, castLevel: 2 }).formula, "1d4");
+  assert.equal(resolveScaledFormula({ formula: partBHealing.formula, scaling: partBHealing.scaling, castLevel: 3 }).formula, "1d4 + (2)");
 });
 
 test("debug zone translation preset applies canonical movement and resolves it for metric scenes", async () => {

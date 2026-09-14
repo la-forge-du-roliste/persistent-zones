@@ -126,6 +126,12 @@ const WEB_FREQUENCY_GROUP = "web-restrain";
 const SPIRIT_GUARDIANS_FREQUENCY_GROUP = "spirit-guardians-damage";
 const SLEET_STORM_FREQUENCY_GROUP = "sleet-storm-save";
 const CLOUDKILL_FREQUENCY_GROUP = "cloudkill-damage";
+const WALL_OF_FIRE_SCALING = Object.freeze({
+  mode: "per-level",
+  baseLevelMode: "item",
+  baseLevel: 4,
+  perLevelFormula: "1d8"
+});
 
 const buildFlamingSphereTriggers = () => ({
   ...buildDisabledTriggers(),
@@ -244,14 +250,14 @@ const buildSpiritGuardiansPreset = ({ id, name, description, damageType }) => bu
 
 const buildWallOfFireBodyTriggers = () => ({
   ...buildDisabledTriggers(),
-  onCreate: buildDamageTrigger({ formula: "5d8", type: "fire", ability: "dex", half: true }),
-  enter: buildDamageTrigger({ formula: "5d8", type: "fire", frequency: "once-per-turn", frequencyGroup: WALL_OF_FIRE_ENTER_FREQUENCY_GROUP }),
-  turnEnd: buildDamageTrigger({ formula: "5d8", type: "fire", frequency: "once-per-turn", frequencyGroup: WALL_OF_FIRE_TURN_END_FREQUENCY_GROUP })
+  onCreate: buildDamageTrigger({ formula: "5d8", type: "fire", ability: "dex", half: true, scaling: WALL_OF_FIRE_SCALING }),
+  enter: buildDamageTrigger({ formula: "5d8", type: "fire", frequency: "once-per-turn", frequencyGroup: WALL_OF_FIRE_ENTER_FREQUENCY_GROUP, scaling: WALL_OF_FIRE_SCALING }),
+  turnEnd: buildDamageTrigger({ formula: "5d8", type: "fire", frequency: "once-per-turn", frequencyGroup: WALL_OF_FIRE_TURN_END_FREQUENCY_GROUP, scaling: WALL_OF_FIRE_SCALING })
 });
 
 const buildWallOfFireHotSideTriggers = () => ({
   ...buildDisabledTriggers(),
-  turnEnd: buildDamageTrigger({ formula: "5d8", type: "fire", frequency: "once-per-turn", frequencyGroup: WALL_OF_FIRE_TURN_END_FREQUENCY_GROUP })
+  turnEnd: buildDamageTrigger({ formula: "5d8", type: "fire", frequency: "once-per-turn", frequencyGroup: WALL_OF_FIRE_TURN_END_FREQUENCY_GROUP, scaling: WALL_OF_FIRE_SCALING })
 });
 
 const wallOfFireLinkedWalls = {
@@ -395,7 +401,7 @@ const buildMultipartUiScalingDebugPreset = () => base({
           ...buildDamageTrigger({
             formula: "2d6",
             type: "fire",
-            scaling: { mode: "per-level", baseLevelMode: "item", baseLevel: 1, perLevelFormula: "1d6" }
+            scaling: { mode: "per-level", baseLevelMode: "fixed", baseLevel: 1, perLevelFormula: "1d6" }
           }),
           requiredAbsentStatuses: ["prone"]
         },
