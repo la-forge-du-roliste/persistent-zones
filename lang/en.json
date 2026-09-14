@@ -59,6 +59,7 @@
           "MultipartUiScaling": { "Name": "Debug/Test — Multipart UI and Scaling", "Description": "Two distinct zone parts with multiple triggers, advanced status conditions, and independent automatic and fixed-reference scaling." },
           "LinkedDistanceUnits": { "Name": "Debug/Test — Linked Wall and Light Units", "Description": "A circle with linked walls and light for checking that their distances display the scene's active unit." },
           "RadiusScalingUi": { "Name": "Debug/Test — Radius Scaling", "Description": "A 20-foot circle whose radius increases by 20 feet per higher slot level, with no other effect." },
+          "GeometryUnitsUi": { "Name": "Debug/Test — Geometry Units", "Description": "A neutral 10-foot circle for checking the unit displayed with geometry dimensions." },
           "ZoneTranslation": { "Name": "Debug/Test — Zone Translation", "Description": "A neutral 10-foot circle that moves 10 feet away from its source at the start of the source's turn." },
           "ControlledMovement": { "Name": "Debug/Test — Controlled Movement", "Description": "A neutral 10-foot circle with a ready-to-use Bonus Action movement command, limited to 30 feet." },
           "PhysicalContactProximity": { "Name": "Debug/Test — Physical Contact and Proximity", "Description": "A neutral circle with a 2.5-foot physical body, controlled movement, and 5-foot proximity feedback." },

@@ -199,9 +199,9 @@
     <div data-pz-geometry="circle emanation">
       <div class="form-group">
         {{#if (eq persistentZone.geometry.type "emanation")}}
-        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.EmanationRadius"}}</label>
+        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.EmanationRadius"}} ({{persistentZoneGeometryUnitLabel}})</label>
         {{else}}
-        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.CircleRadius"}}</label>
+        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.CircleRadius"}} ({{persistentZoneGeometryUnitLabel}})</label>
         {{/if}}
         <input type="number" name="persistentZone.geometry.radius" value="{{persistentZone.geometry.radius}}" min="0" step="any">
         {{#if (eq persistentZone.geometry.type "emanation")}}
@@ -213,11 +213,11 @@
     </div>
     <div data-pz-geometry="rectangle">
       <div class="form-group">
-        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.RectangleWidth"}}</label>
+        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.RectangleWidth"}} ({{persistentZoneGeometryUnitLabel}})</label>
         <input type="number" name="persistentZone.geometry.width" value="{{persistentZone.geometry.width}}" min="0" step="any">
       </div>
       <div class="form-group">
-        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.RectangleHeight"}}</label>
+        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.RectangleHeight"}} ({{persistentZoneGeometryUnitLabel}})</label>
         <input type="number" name="persistentZone.geometry.height" value="{{persistentZone.geometry.height}}" min="0" step="any">
       </div>
       <div class="form-group">
@@ -232,12 +232,12 @@
     </div>
     <div data-pz-geometry="ring">
       <div class="form-group">
-        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.RingReferenceRadius"}}</label>
+        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.RingReferenceRadius"}} ({{persistentZoneGeometryUnitLabel}})</label>
         <input type="number" name="persistentZone.geometry.ringReferenceRadius" value="{{persistentZone.geometry.ringReferenceRadius}}" min="0" step="any">
         <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.RingReferenceRadius"}}</p>
       </div>
       <div class="form-group">
-        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.RingInnerWidth"}}</label>
+        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.RingInnerWidth"}} ({{persistentZoneGeometryUnitLabel}})</label>
         <input type="number" name="persistentZone.geometry.ringInnerWidth" value="{{persistentZone.geometry.ringInnerWidth}}" min="0" step="any">
         {{#if persistentZoneRingUsesLegacySemantics}}
           <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.LegacyRingInnerWidth"}}</p>
@@ -246,7 +246,7 @@
         {{/if}}
       </div>
       <div class="form-group">
-        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.RingOuterWidth"}}</label>
+        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.RingOuterWidth"}} ({{persistentZoneGeometryUnitLabel}})</label>
         <input type="number" name="persistentZone.geometry.ringOuterWidth" value="{{persistentZone.geometry.ringOuterWidth}}" min="0" step="any">
         {{#if persistentZoneRingUsesLegacySemantics}}
           <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.LegacyRingOuterWidth"}}</p>
@@ -266,12 +266,12 @@
     </div>
     <div data-pz-geometry="wall">
       <div class="form-group">
-        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.WallLength"}}</label>
+        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.WallLength"}} ({{persistentZoneGeometryUnitLabel}})</label>
         <input type="number" name="persistentZone.geometry.wallLength" value="{{persistentZone.geometry.wallLength}}" min="0" step="any">
         <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.WallLength"}}</p>
       </div>
       <div class="form-group">
-        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.WallThickness"}}</label>
+        <label>{{localize "PERSISTENT_ZONES.Activity.Fields.WallThickness"}} ({{persistentZoneGeometryUnitLabel}})</label>
         <input type="number" name="persistentZone.geometry.wallThickness" value="{{persistentZone.geometry.wallThickness}}" min="0" step="any">
         <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.WallThickness"}}</p>
       </div>

@@ -59,6 +59,7 @@
           "MultipartUiScaling": { "Name": "Debug/Test — Multipart UI et scaling", "Description": "Deux parties de zone distinctes avec plusieurs déclenchements, des conditions avancées et des scalings indépendants à référence automatique et fixe." },
           "LinkedDistanceUnits": { "Name": "Debug/Test — Unités des murs et lumières", "Description": "Un cercle avec murs et lumière liés pour vérifier que leurs distances affichent l’unité active de la scène." },
           "RadiusScalingUi": { "Name": "Debug/Test — Scaling du rayon", "Description": "Un cercle de 6 m dont le rayon augmente de 6 m par niveau d’emplacement supérieur, sans autre effet." },
+          "GeometryUnitsUi": { "Name": "Debug/Test — Unités de géométrie", "Description": "Un cercle neutre de 3 m pour vérifier l’unité affichée avec les dimensions de géométrie." },
           "ZoneTranslation": { "Name": "Debug/Test — Déplacement de zone", "Description": "Un cercle neutre de 3 m qui s’éloigne de 3 m de sa source au début du tour de celle-ci." },
           "ControlledMovement": { "Name": "Debug/Test — Déplacement contrôlé", "Description": "Un cercle neutre de 3 m avec une commande d’Action bonus prête à l’emploi, limitée à 9 m." },
           "PhysicalContactProximity": { "Name": "Debug/Test — Contact physique et proximité", "Description": "Un cercle neutre avec un corps physique de 0,75 m, déplacement contrôlé et retour de proximité à 1,5 m." },

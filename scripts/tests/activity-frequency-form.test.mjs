@@ -429,6 +429,8 @@ test("Difficult Terrain and trigger summary copy is localized in EN and FR", () 
   assert.equal(fr.PERSISTENT_ZONES.Activity.Presets.Debug.LinkedDistanceUnits.Name, "Debug/Test — Unités des murs et lumières");
   assert.equal(en.PERSISTENT_ZONES.Activity.Presets.Debug.RadiusScalingUi.Name, "Debug/Test — Radius Scaling");
   assert.equal(fr.PERSISTENT_ZONES.Activity.Presets.Debug.RadiusScalingUi.Name, "Debug/Test — Scaling du rayon");
+  assert.equal(en.PERSISTENT_ZONES.Activity.Presets.Debug.GeometryUnitsUi.Name, "Debug/Test — Geometry Units");
+  assert.equal(fr.PERSISTENT_ZONES.Activity.Presets.Debug.GeometryUnitsUi.Name, "Debug/Test — Unités de géométrie");
   assert.equal(en.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentStatuses, "Affected Creature Statuses");
   assert.equal(fr.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentStatuses, "Statuts de la créature affectée");
   assert.equal(en.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentSourceStatuses, "Statuses Already Applied by This Zone");
@@ -482,6 +484,19 @@ test("radius scaling UI hides inactive options and labels its increment with the
     assert.match(template, /RadiusScalingPerLevel[^\n]+persistentZoneGeometryUnitLabel/);
   } finally {
     globalThis.canvas.scene = previousScene;
+  }
+});
+
+test("every editable main geometry dimension displays its configured unit", () => {
+  const template = fs.readFileSync(new URL("../../templates/persistent-zone-activity-tab.hbs", import.meta.url), "utf8");
+  for (const field of [
+    "geometry.radius", "geometry.width", "geometry.height", "geometry.ringReferenceRadius",
+    "geometry.ringInnerWidth", "geometry.ringOuterWidth", "geometry.wallLength", "geometry.wallThickness"
+  ]) {
+    const input = `name="persistentZone.${field}"`;
+    const inputIndex = template.indexOf(input);
+    assert.notEqual(inputIndex, -1, field);
+    assert.match(template.slice(Math.max(0, inputIndex - 500), inputIndex), /persistentZoneGeometryUnitLabel/);
   }
 });
 
