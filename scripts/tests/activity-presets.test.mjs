@@ -16,7 +16,7 @@ import {
 globalThis.foundry ??= { utils: { deepClone: structuredClone } };
 
 test("accepts versioned built-in presets", () => {
-  assert.equal(BUILTIN_PRESETS.length, 36);
+  assert.equal(BUILTIN_PRESETS.length, 37);
   for (const candidate of BUILTIN_PRESETS) {
     const preset = normalizePreset(candidate);
     assert.ok(preset);
@@ -304,7 +304,7 @@ test("visible library separates validated SRD and debug movement-cost presets", 
   const ids = getBuiltinPersistentZonePresets().map(({ id }) => id).sort();
   assert.deepEqual(ids, [
     "debug.controlled-zone-movement", "debug.damage-scaling-3d8", "debug.damage-scaling-constant", "debug.healing-scaling", "debug.midi-qol-resolution",
-    "debug.movement-cost-x2", "debug.movement-cost-x4", "debug.movement-cost-x4-walls", "debug.native-resolution", "debug.physical-contact-proximity", "debug.rectangle-walls", "debug.rectangle-walls-terrain", "debug.temporary-hit-points-scaling",
+    "debug.movement-cost-x2", "debug.movement-cost-x4", "debug.movement-cost-x4-walls", "debug.multipart-ui-scaling", "debug.native-resolution", "debug.physical-contact-proximity", "debug.rectangle-walls", "debug.rectangle-walls-terrain", "debug.temporary-hit-points-scaling",
     "debug.terrain-x4-allies", "debug.terrain-x4-enemies", "debug.terrain-x4-enemies-walls", "debug.terrain-x4-others", "debug.terrain-x4-self", "debug.token-membership-50", "debug.zone-translation",
     "srd-5.2.1.black-tentacles", "srd-5.2.1.cloudkill", "srd-5.2.1.entangle", "srd-5.2.1.flaming-sphere", "srd-5.2.1.fog-cloud", "srd-5.2.1.grease",
     "srd-5.2.1.insect-plague", "srd-5.2.1.moonbeam", "srd-5.2.1.sleet-storm", "srd-5.2.1.spike-growth", "srd-5.2.1.spirit-guardians-necrotic", "srd-5.2.1.spirit-guardians-radiant",
@@ -313,7 +313,7 @@ test("visible library separates validated SRD and debug movement-cost presets", 
   assert.equal(ids.some((id) => id.startsWith("builtin.")), false);
   for (const id of [
     "debug.damage-scaling-3d8", "debug.damage-scaling-constant", "debug.healing-scaling", "debug.midi-qol-resolution", "debug.temporary-hit-points-scaling",
-    "debug.movement-cost-x2", "debug.movement-cost-x4", "debug.movement-cost-x4-walls", "debug.native-resolution", "debug.physical-contact-proximity", "debug.rectangle-walls", "debug.rectangle-walls-terrain",
+    "debug.movement-cost-x2", "debug.movement-cost-x4", "debug.movement-cost-x4-walls", "debug.multipart-ui-scaling", "debug.native-resolution", "debug.physical-contact-proximity", "debug.rectangle-walls", "debug.rectangle-walls-terrain",
     "debug.controlled-zone-movement", "debug.terrain-x4-allies", "debug.terrain-x4-enemies", "debug.terrain-x4-enemies-walls", "debug.terrain-x4-others", "debug.terrain-x4-self", "debug.token-membership-50", "debug.zone-translation"
   ]) {
     const preset = getPersistentZonePreset(id);
@@ -329,6 +329,33 @@ test("token membership Debug/Test preset is visible and neutral", () => {
   assert.deepEqual(preset.persistentZone.obstacles, { mode: "unrestricted" });
   assert.equal(preset.persistentZone.terrain.enabled, false);
   assert.ok(Object.values(preset.persistentZone.triggers).every((trigger) => trigger.enabled === false));
+});
+
+test("multipart UI scaling Debug/Test preset is ready to apply and preserves distinct part configuration", async () => {
+  const preset = getPersistentZonePreset("debug.multipart-ui-scaling");
+  assert.equal(preset.category, "debug-tests");
+  assert.equal(preset.persistentZone.parts.length, 2);
+  const [partA, partB] = preset.persistentZone.parts;
+  assert.deepEqual(partA.triggers.enter.simpleEffect.damage.scaling, {
+    mode: "per-level", baseLevelMode: "item", baseLevel: 1, perLevelFormula: "1d6"
+  });
+  assert.deepEqual(partA.triggers.enter.requiredAbsentStatuses, ["prone"]);
+  assert.deepEqual(partB.triggers.turnEnd.simpleEffect.healing.scaling, {
+    mode: "per-level", baseLevelMode: "fixed", baseLevel: 2, perLevelFormula: "2"
+  });
+  assert.deepEqual(partB.triggers.turnEnd.requiredAbsentSourceStatuses, ["restrained"]);
+  assert.equal(Object.values(partA.triggers).filter(({ enabled }) => enabled).length, 2);
+  assert.equal(Object.values(partB.triggers).filter(({ enabled }) => enabled).length, 2);
+
+  let persisted;
+  const metric = { grid: { units: "m", distance: 1.5, size: 100 } };
+  await applyPresetToActivity({ id: "multipart-ui", item: { async updateActivity(_id, updates) {
+    if (updates.persistentZone) persisted = structuredClone(updates.persistentZone);
+  } } }, preset, { scene: metric });
+  assert.equal(persisted.parts.length, 2);
+  assert.equal(persisted.parts[1].geometry.offsetEnd, 1.5);
+  assert.equal(persisted.parts[0].triggers.enter.simpleEffect.damage.scaling.baseLevelMode, "item");
+  assert.equal(persisted.parts[1].triggers.turnEnd.simpleEffect.healing.scaling.baseLevelMode, "fixed");
 });
 
 test("debug zone translation preset applies canonical movement and resolves it for metric scenes", async () => {

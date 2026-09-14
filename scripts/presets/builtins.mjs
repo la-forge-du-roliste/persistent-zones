@@ -373,6 +373,63 @@ const buildPhysicalTargetingDebugPreset = () => base({
   }
 });
 
+const buildMultipartUiScalingDebugPreset = () => base({
+  id: "debug.multipart-ui-scaling",
+  name: "PERSISTENT_ZONES.Activity.Presets.Debug.MultipartUiScaling.Name",
+  description: "PERSISTENT_ZONES.Activity.Presets.Debug.MultipartUiScaling.Description",
+  category: "debug-tests",
+  geometry: { type: "ring", ringReferenceRadius: 10, ringInnerWidth: 5, ringOuterWidth: 0, units: "ft" },
+  obstacles: { mode: "unrestricted" },
+  terrain: { enabled: false, multiplier: 2 },
+  triggers: buildDisabledTriggers(),
+  parts: [
+    {
+      id: "part-a",
+      label: "A",
+      role: "primary",
+      geometry: { type: "template" },
+      terrain: { enabled: false },
+      triggers: {
+        ...buildDisabledTriggers(),
+        enter: {
+          ...buildDamageTrigger({
+            formula: "2d6",
+            type: "fire",
+            scaling: { mode: "per-level", baseLevelMode: "item", baseLevel: 1, perLevelFormula: "1d6" }
+          }),
+          requiredAbsentStatuses: ["prone"]
+        },
+        turnEnd: { ...buildDisabledTrigger(), enabled: true, mode: "simple-effect" }
+      }
+    },
+    {
+      id: "part-b",
+      label: "B",
+      role: "secondary",
+      geometry: { type: "side-of-ring", referencePartId: "part-a", side: "outer", offsetReference: "body-edge", offsetStart: 0, offsetEnd: 5 },
+      terrain: { enabled: false },
+      triggers: {
+        ...buildDisabledTriggers(),
+        onCreate: { ...buildDisabledTrigger(), enabled: true, mode: "simple-effect" },
+        turnEnd: {
+          ...buildDisabledTrigger(),
+          enabled: true,
+          mode: "simple-effect",
+          requiredAbsentSourceStatuses: ["restrained"],
+          simpleEffect: {
+            ...buildDisabledTrigger().simpleEffect,
+            healing: {
+              enabled: true,
+              formula: "1d4",
+              scaling: { mode: "per-level", baseLevelMode: "fixed", baseLevel: 2, perLevelFormula: "2" }
+            }
+          }
+        }
+      }
+    }
+  ]
+});
+
 const buildTokenMembershipDebugPreset = () => base({
   id: "debug.token-membership-50",
   name: "PERSISTENT_ZONES.Activity.Presets.Debug.TokenMembership50.Name",
@@ -462,6 +519,7 @@ const buildRecoveryScalingDebugPreset = ({ id, name, description, recoveryType, 
 };
 
 export const BUILTIN_PRESETS = Object.freeze([
+  buildMultipartUiScalingDebugPreset(),
   buildZoneTranslationDebugPreset(),
   buildControlledMovementDebugPreset(),
   buildPhysicalTargetingDebugPreset(),

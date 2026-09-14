@@ -22,7 +22,7 @@ Persistent Zones est basé sur les Activities D&D5e. Un Item peut contenir plusi
 
 ## Tests Foundry et workflow
 
-L’utilisateur ne doit jamais fabriquer manuellement une Activity complexe pour un test. Si une configuration particulière est nécessaire, fournir un preset Debug/Test ou un helper Debug prêt à l’emploi, avec les libellés FR/EN pertinents.
+L’utilisateur ne doit jamais fabriquer ni configurer manuellement une Activity complexe pour un test. Toute fonctionnalité nécessitant une validation Foundry doit fournir un véritable preset PZ entièrement prêt à l’emploi dans `Presets debug/test`, avec les libellés FR/EN pertinents. Un helper Debug peut compléter l’outillage, mais ne remplace pas ce preset.
 
 Pendant un chantier :
 

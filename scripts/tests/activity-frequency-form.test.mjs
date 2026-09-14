@@ -41,13 +41,17 @@ const {
   addPersistentZoneStatusGuardValue,
   applyExplicitPersistentZoneCheckboxStates,
   applyExplicitPersistentZoneStatusGuardStates,
+  buildPersistentZoneTriggerRenderContext,
   buildMultipartTriggerSummary,
+  captureMultipartFieldPatch,
   capturePersistentZoneDisclosureState,
   captureTriggerOpenState,
   mergePersistentZoneActivitySubmitData,
   normalizePersistentZoneActivitySubmitData,
+  patchMultipartFieldById,
   readPersistentZoneStatusGuardValues,
   removePersistentZoneStatusGuardValue,
+  renderPersistentZoneTriggerEditors,
   restorePersistentZoneDisclosureState,
   restoreTriggerOpenState
 } = await import("../activity/persistent-zone-activity-sheet.mjs");
@@ -161,30 +165,29 @@ test("real partial FormData patches preserve geometry and elevation across succe
 
 test("Activity template contains one static control per scalar Persistent Zone path", () => {
   const template = fs.readFileSync(new URL("../../templates/persistent-zone-activity-tab.hbs", import.meta.url), "utf8");
+  const triggers = fs.readFileSync(new URL("../../templates/persistent-zone-triggers.hbs", import.meta.url), "utf8");
   const names = Array.from(template.matchAll(/name="(persistentZone\.[^"]+)"/g), match => match[1]);
   const duplicates = Array.from(new Set(names.filter((name, index) => names.indexOf(name) !== index)));
   assert.deepEqual(duplicates, [], `duplicate scalar field names: ${duplicates.join(", ")}`);
   assert.equal(names.filter((name) => name === "persistentZone.geometry.radius").length, 1);
-  assert.ok(names.includes("persistentZone.triggers.{{triggerRow.timing}}.targeting.mode"));
-  assert.ok(names.includes("persistentZone.triggers.{{triggerRow.timing}}.targeting.distance"));
-  assert.ok(names.includes("persistentZone.triggers.{{../timing}}.requiredAbsentStatuses"));
-  assert.ok(names.includes("persistentZone.triggers.{{../timing}}.requiredAbsentSourceStatuses"));
+  assert.match(template, /data-pz-mono-trigger-editor/);
   assert.ok(names.includes("persistentZone.controlledMovement.enabled"));
   assert.ok(names.includes("persistentZone.controlledMovement.maxDistance"));
   assert.ok(names.includes("persistentZone.controlledMovement.physicalRadius"));
   assert.ok(names.includes("persistentZone.translation.enabled"));
   assert.ok(names.includes("persistentZone.translation.distance"));
-  for (const binding of [
-    "persistentZone.triggers.{{triggerRow.timing}}.simpleEffect.damage.enabled",
-    "persistentZone.triggers.{{triggerRow.timing}}.simpleEffect.damage.formula",
-    "persistentZone.triggers.{{triggerRow.timing}}.simpleEffect.save.enabled",
-    "persistentZone.triggers.{{triggerRow.timing}}.simpleEffect.statuses.enabled"
-  ]) assert.ok(names.includes(binding), `retains effect binding ${binding}`);
+  for (const binding of ["targeting.mode", "targeting.distance", "requiredAbsentStatuses",
+    "requiredAbsentSourceStatuses", "simpleEffect.damage.enabled", "simpleEffect.damage.formula",
+    "simpleEffect.save.enabled", "simpleEffect.statuses.enabled"]) {
+    assert.ok(triggers.includes(`{{triggerRow.fieldPath}}.${binding}`), `shared trigger editor retains ${binding}`);
+  }
   assert.match(template, /data-pz-ensure-controlled-movement/);
   assert.match(template, /persistentZoneControlledMovement\.linkedActivityDisplay/);
   assert.doesNotMatch(template, /value="\{\{persistentZoneControlledMovement\.activationActivityId\}\}"/);
-  assert.match(template, /<details class="persistent-zone-activity__trigger"/);
-  assert.match(template, /persistent-zone-activity__trigger-effects/);
+  assert.match(triggers, /<details class="persistent-zone-activity__trigger"/);
+  assert.match(triggers, /persistent-zone-activity__trigger-effects/);
+  assert.match(triggers, /persistent-zone-activity__advanced-conditions/);
+  assert.match(triggers, /data-pz-part-field/);
 });
 
 test("automatic movement UI defaults off and resolves canonical distance in the scene unit", () => {
@@ -287,6 +290,124 @@ test("stable disclosure IDs preserve multiple triggers and advanced condition se
   ]);
 });
 
+test("multipart trigger disclosures preserve each part independently", () => {
+  const disclosures = [
+    { dataset: { pzDisclosureId: "trigger:part-part-a-enter" }, open: true },
+    { dataset: { pzDisclosureId: "trigger:part-part-a-enter:advanced-conditions" }, open: true },
+    { dataset: { pzDisclosureId: "trigger:part-part-b-enter" }, open: false }
+  ];
+  const root = { querySelectorAll: () => disclosures };
+  const open = capturePersistentZoneDisclosureState(root);
+  disclosures.forEach((disclosure) => { disclosure.open = false; });
+  restorePersistentZoneDisclosureState(root, open);
+  assert.deepEqual(disclosures.map(({ open: isOpen }) => isOpen), [true, true, false]);
+});
+
+test("mono and multipart trigger outlets render through the same shared template", async () => {
+  const previousApplications = foundry.applications;
+  const calls = [];
+  foundry.applications = { handlebars: { async renderTemplate(path, context) {
+    calls.push({ path, rows: context.triggerRows });
+    return context.triggerRows.map((row) => row.uiKey).join(",");
+  } } };
+  try {
+    const mono = { innerHTML: "" };
+    const partA = { innerHTML: "", closest: () => ({ dataset: { pzPartId: "part-a" } }) };
+    const partB = { innerHTML: "", closest: () => ({ dataset: { pzPartId: "part-b" } }) };
+    const root = { querySelectorAll(selector) {
+      if (selector === "[data-pz-mono-trigger-editor]") return [mono];
+      if (selector === "[data-pz-part-trigger-editor]") return [partA, partB];
+      return [];
+    } };
+    await renderPersistentZoneTriggerEditors({ querySelectorAll: () => [root] }, {
+      persistentZoneTriggerRows: [{ uiKey: "enter" }],
+      persistentZonePartRows: [
+        { id: "part-a", triggerRows: [{ uiKey: "part-part-a-enter" }] },
+        { id: "part-b", triggerRows: [{ uiKey: "part-part-b-turnEnd" }] }
+      ]
+    });
+    assert.deepEqual(calls.map(({ path }) => path), Array(3).fill("modules/persistent-zones/templates/persistent-zone-triggers.hbs"));
+    assert.equal(mono.innerHTML, "enter");
+    assert.equal(partA.innerHTML, "part-part-a-enter");
+    assert.equal(partB.innerHTML, "part-part-b-turnEnd");
+  } finally {
+    foundry.applications = previousApplications;
+  }
+});
+
+test("the persisted Activity render context always supplies six mono and multipart trigger rows", () => {
+  const monoPreset = getPersistentZonePreset("srd-5.2.1.web");
+  const monoActivity = {
+    id: "mono",
+    _source: { persistentZone: structuredClone(monoPreset.persistentZone) },
+    item: { system: { activities: new Map() } }
+  };
+  const monoContext = buildPersistentZoneTriggerRenderContext(monoActivity);
+  assert.deepEqual(
+    monoContext.persistentZoneTriggerRows.map(({ timing }) => timing),
+    ["onCreate", "enter", "move", "exit", "turnStart", "turnEnd"]
+  );
+
+  const multipartPreset = getPersistentZonePreset("debug.multipart-ui-scaling");
+  const multipartActivity = {
+    id: "multipart",
+    _source: { persistentZone: structuredClone(multipartPreset.persistentZone) },
+    item: { system: { activities: new Map() } }
+  };
+  const multipartContext = buildPersistentZoneTriggerRenderContext(multipartActivity);
+  assert.equal(multipartContext.persistentZonePartRows.length, 2);
+  for (const part of multipartContext.persistentZonePartRows) {
+    assert.deepEqual(
+      part.triggerRows.map(({ timing }) => timing),
+      ["onCreate", "enter", "move", "exit", "turnStart", "turnEnd"],
+      `part ${part.id} must expose every trigger editor`
+    );
+  }
+});
+
+test("the shared editor renders all six triggers in mono and in every multipart part", async () => {
+  const previousApplications = foundry.applications;
+  foundry.applications = { handlebars: { async renderTemplate(_path, context) {
+    return context.triggerRows.map(({ timing }) => timing).join(",");
+  } } };
+  try {
+    const monoPreset = getPersistentZonePreset("srd-5.2.1.web");
+    const monoContext = buildPersistentZoneTriggerRenderContext({
+      id: "mono",
+      _source: { persistentZone: structuredClone(monoPreset.persistentZone) },
+      item: { system: { activities: new Map() } }
+    });
+    const monoEditor = { innerHTML: "" };
+    const monoRoot = { querySelectorAll(selector) {
+      if (selector === "[data-pz-mono-trigger-editor]") return [monoEditor];
+      if (selector === "[data-pz-part-trigger-editor]") return [];
+      return [];
+    } };
+    await renderPersistentZoneTriggerEditors({ querySelectorAll: () => [monoRoot] }, monoContext);
+    assert.equal(monoEditor.innerHTML.split(",").length, 6);
+
+    const multipartPreset = getPersistentZonePreset("debug.multipart-ui-scaling");
+    const multipartContext = buildPersistentZoneTriggerRenderContext({
+      id: "multipart",
+      _source: { persistentZone: structuredClone(multipartPreset.persistentZone) },
+      item: { system: { activities: new Map() } }
+    });
+    const partEditors = multipartContext.persistentZonePartRows.map((part) => ({
+      innerHTML: "",
+      closest: () => ({ dataset: { pzPartId: part.id } })
+    }));
+    const multipartRoot = { querySelectorAll(selector) {
+      if (selector === "[data-pz-mono-trigger-editor]") return [];
+      if (selector === "[data-pz-part-trigger-editor]") return partEditors;
+      return [];
+    } };
+    await renderPersistentZoneTriggerEditors({ querySelectorAll: () => [multipartRoot] }, multipartContext);
+    assert.deepEqual(partEditors.map(({ innerHTML }) => innerHTML.split(",").length), [6, 6]);
+  } finally {
+    foundry.applications = previousApplications;
+  }
+});
+
 test("Difficult Terrain and trigger summary copy is localized in EN and FR", () => {
   const en = JSON.parse(fs.readFileSync(new URL("../../lang/en.json", import.meta.url), "utf8"));
   const fr = JSON.parse(fs.readFileSync(new URL("../../lang/fr.json", import.meta.url), "utf8"));
@@ -302,6 +423,8 @@ test("Difficult Terrain and trigger summary copy is localized in EN and FR", () 
   assert.equal(fr.PERSISTENT_ZONES.Activity.Fields.ControlledMovementPhysicalRadius, "Rayon de collision");
   assert.equal(en.PERSISTENT_ZONES.Activity.Fields.AddStatus, "Add a Status…");
   assert.equal(fr.PERSISTENT_ZONES.Activity.Fields.AddStatus, "Ajouter un statut…");
+  assert.equal(en.PERSISTENT_ZONES.Activity.Presets.Debug.MultipartUiScaling.Name, "Debug/Test — Multipart UI and Scaling");
+  assert.equal(fr.PERSISTENT_ZONES.Activity.Presets.Debug.MultipartUiScaling.Name, "Debug/Test — Multipart UI et scaling");
   assert.equal(en.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentStatuses, "Affected Creature Statuses");
   assert.equal(fr.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentStatuses, "Statuts de la créature affectée");
   assert.equal(en.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentSourceStatuses, "Statuses Already Applied by This Zone");
@@ -632,6 +755,92 @@ test("multipart trigger summaries list active localized rows or None", () => {
     "Entry • 2d6 Fire damage • 1d6 Radiant damage • 1d6 temporary HP • DEX save half • Restrained"
   ]);
   delete game.i18n;
+});
+
+test("multipart scaling controls and serialized data retain independent effects and parts", () => {
+  const template = fs.readFileSync(new URL("../../templates/persistent-zone-triggers.hbs", import.meta.url), "utf8");
+  const initial = {
+    parts: ["primary", "secondary"].map((id) => ({ id, geometry: { type: "template" },
+      triggers: { enter: { enabled: true, mode: "simple-effect", simpleEffect: {
+        damage: { enabled: true, formula: "2d6", type: "fire" },
+        healing: { enabled: true, formula: "1d4" },
+        temporaryHitPoints: { enabled: true, formula: "2" }
+      } } }
+    }))
+  };
+  for (const effect of ["damage", "healing", "temporaryHitPoints"]) {
+    for (const field of ["mode", "baseLevelMode", "baseLevel", "perLevelFormula"]) {
+      assert.ok(template.includes(`data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.${effect}.scaling.${field}"`));
+    }
+    const submitted = { multipartEnabled: true, parts: [] };
+    for (const [field, value] of Object.entries({ mode: "per-level", baseLevelMode: "fixed", baseLevel: 3, perLevelFormula: "1d4" })) {
+      setProperty(submitted, `parts.0.triggers.enter.simpleEffect.${effect}.scaling.${field}`, value);
+    }
+    const configured = structuredClone(initial);
+    configured.parts[0].triggers.enter.simpleEffect[effect].scaling = submitted.parts[0].triggers.enter.simpleEffect[effect].scaling;
+    const saved = normalizePersistentZoneActivitySubmitData(configured);
+    assert.equal(saved.parts[0].triggers.enter.simpleEffect[effect].scaling.perLevelFormula, "1d4");
+    assert.equal(saved.parts[1].triggers.enter.simpleEffect[effect].scaling, undefined);
+    const reedit = structuredClone(saved);
+    reedit.parts[0].triggers.enter.simpleEffect[effect].scaling.baseLevelMode = "item";
+    const reopened = normalizePersistentZoneActivitySubmitData(reedit);
+    assert.equal(reopened.parts[0].triggers.enter.simpleEffect[effect].scaling.baseLevelMode, "item");
+    assert.equal(reopened.parts[0].triggers.enter.simpleEffect[effect].scaling.perLevelFormula, "1d4");
+    assert.equal(reopened.parts[0].triggers.enter.simpleEffect[effect].formula, initial.parts[0].triggers.enter.simpleEffect[effect].formula);
+  }
+});
+
+test("multipart UI Debug preset exposes independent summaries, guards, scaling, and field paths", () => {
+  const sheet = new PersistentZoneActivitySheet();
+  sheet.activity = { _source: { persistentZone: structuredClone(getPersistentZonePreset("debug.multipart-ui-scaling").persistentZone) } };
+  const context = sheet._preparePersistentZoneContext({ tabs: { persistentZone: {} } });
+  assert.equal(context.persistentZonePartRows.length, 2);
+  const [partA, partB] = context.persistentZonePartRows;
+  const enterA = partA.triggerRows.find(({ timing }) => timing === "enter");
+  const endB = partB.triggerRows.find(({ timing }) => timing === "turnEnd");
+  assert.equal(enterA.fieldPath, "persistentZone.parts.0.triggers.enter");
+  assert.equal(endB.fieldPath, "persistentZone.parts.1.triggers.turnEnd");
+  assert.equal(enterA.uiKey, "part-part-a-enter");
+  assert.equal(endB.uiKey, "part-part-b-turnEnd");
+  assert.deepEqual(enterA.requiredAbsentStatusTags.map(({ value }) => value), ["prone"]);
+  assert.deepEqual(endB.requiredAbsentSourceStatusTags.map(({ value }) => value), ["restrained"]);
+  assert.equal(enterA.state.simpleEffect.damage.scaling.baseLevelMode, "item");
+  assert.equal(endB.state.simpleEffect.healing.scaling.baseLevelMode, "fixed");
+  assert.ok(enterA.summary);
+  assert.ok(endB.summary);
+});
+
+test("multipart field patches update one trigger and preserve sibling parts", async () => {
+  const parts = [
+    { id: "part-a", triggers: { enter: { simpleEffect: { damage: { formula: "2d6" } } } } },
+    { id: "part-b", triggers: { enter: { simpleEffect: { damage: { formula: "4d6" } } } } }
+  ];
+  const control = {
+    type: "text",
+    value: "1d6",
+    dataset: { pzPartField: "triggers.enter.simpleEffect.damage.scaling.perLevelFormula" },
+    closest(selector) { return selector === "[data-pz-part-field]" ? this : { dataset: { pzPartId: "part-a" } }; }
+  };
+  const patch = captureMultipartFieldPatch({ target: control });
+  const saved = await patchMultipartFieldById(parts, patch);
+  assert.equal(saved[0].triggers.enter.simpleEffect.damage.scaling.perLevelFormula, "1d6");
+  assert.equal(saved[0].triggers.enter.simpleEffect.damage.formula, "2d6");
+  assert.equal(saved[1].triggers.enter.simpleEffect.damage.formula, "4d6");
+  assert.equal(saved[1].triggers.enter.simpleEffect.damage.scaling, undefined);
+
+  const statusGroup = {
+    type: undefined,
+    dataset: {
+      pzPartField: "triggers.turnEnd.requiredAbsentSourceStatuses",
+      pzStatusGuard: ""
+    },
+    querySelectorAll: () => [{ value: "restrained" }],
+    closest(selector) { return selector === "[data-pz-part-field]" ? this : { dataset: { pzPartId: "part-b" } }; }
+  };
+  const statusPatch = captureMultipartFieldPatch({ target: statusGroup });
+  const guarded = await patchMultipartFieldById(saved, statusPatch);
+  assert.deepEqual(guarded[1].triggers.turnEnd.requiredAbsentSourceStatuses, ["restrained"]);
+  assert.equal(guarded[0].triggers.turnEnd, undefined);
 });
 
 test("expanded mono and multipart form fields survive custom PZ processing", () => {

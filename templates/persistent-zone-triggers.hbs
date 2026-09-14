@@ -1,0 +1,396 @@
+    {{#each triggerRows as |triggerRow|}}
+      <details class="persistent-zone-activity__trigger" data-pz-trigger="{{triggerRow.timing}}" data-pz-trigger-key="{{triggerRow.uiKey}}" data-pz-disclosure-id="trigger:{{triggerRow.uiKey}}">
+        <summary class="persistent-zone-activity__trigger-summary">
+          <span class="persistent-zone-activity__trigger-summary-title">{{triggerRow.label}}</span>
+          <span class="persistent-zone-activity__trigger-summary-line">{{triggerRow.summary}}</span>
+        </summary>
+        <div class="persistent-zone-activity__trigger-content">
+        <header class="persistent-zone-activity__trigger-header">
+          <label>{{localize "PERSISTENT_ZONES.Activity.Fields.TriggerEnabled"}}</label>
+          <input type="checkbox" name="{{triggerRow.fieldPath}}.enabled" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.enabled"{{/if}} {{#if triggerRow.state.enabled}}checked{{/if}}>
+        </header>
+        {{#if (eq triggerRow.timing "onCreate")}}<p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.TriggerCreate"}}</p>{{/if}}
+        {{#if (eq triggerRow.timing "enter")}}<p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.TriggerEnter"}}</p>{{/if}}
+        {{#if (eq triggerRow.timing "move")}}<p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.TriggerMove"}}</p>{{/if}}
+        {{#if (eq triggerRow.timing "exit")}}<p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.TriggerExit"}}</p>{{/if}}
+        {{#if (eq triggerRow.timing "turnStart")}}<p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.TriggerTurnStart"}}</p>{{/if}}
+        {{#if (eq triggerRow.timing "turnEnd")}}<p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.TriggerTurnEnd"}}</p>{{/if}}
+        <div data-pz-trigger-details>
+          <div class="form-group">
+            <label>{{localize "PERSISTENT_ZONES.Activity.Fields.TriggerTargets"}}</label>
+            <select name="{{triggerRow.fieldPath}}.targetFilter.mode" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.targetFilter.mode"{{/if}}>
+              {{selectOptions ../persistentZoneChoices.triggerTargetFilters selected=triggerRow.state.targetFilter.mode localize=true}}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>{{localize "PERSISTENT_ZONES.Activity.Fields.TriggerTargeting"}}</label>
+            <select name="{{triggerRow.fieldPath}}.targeting.mode" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.targeting.mode"{{/if}} data-pz-trigger-targeting>
+              {{#each triggerRow.targetingOptions as |option|}}
+                <option value="{{option.value}}" {{#if option.selected}}selected{{/if}} {{#if option.requiresControlledMovement}}data-pz-requires-controlled-movement{{/if}} {{#if option.unavailable}}disabled hidden{{/if}}>{{localize option.label}}</option>
+              {{/each}}
+            </select>
+            <p class="hint" data-pz-targeting-help="physical-contact">{{localize "PERSISTENT_ZONES.Activity.Help.TriggerTargetingPhysicalContact"}}</p>
+            <p class="hint" data-pz-targeting-help="proximity">{{localize "PERSISTENT_ZONES.Activity.Help.TriggerTargetingProximity"}}</p>
+          </div>
+          <div class="form-group" data-pz-proximity-distance>
+            <label>{{localize "PERSISTENT_ZONES.Activity.Fields.ProximityDistance"}} ({{triggerRow.unitLabel}})</label>
+            <input type="number" min="0" step="any" name="{{triggerRow.fieldPath}}.targeting.distance" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.targeting.distance"{{/if}} value="{{triggerRow.state.targeting.distance}}">
+          </div>
+          <div class="form-group">
+            <label>{{localize "PERSISTENT_ZONES.Activity.Fields.TriggerFrequency"}}</label>
+            <select name="{{triggerRow.fieldPath}}.frequency" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.frequency"{{/if}} data-pz-frequency-source="{{triggerRow.uiKey}}">
+              {{selectOptions ../persistentZoneChoices.triggerFrequencies selected=triggerRow.state.frequency localize=true}}
+            </select>
+          </div>
+          <div class="form-group" data-pz-frequency-group="{{triggerRow.uiKey}}">
+            <label>{{localize "PERSISTENT_ZONES.Activity.Fields.TriggerFrequencyGroup"}}</label>
+            <input type="text" name="{{triggerRow.fieldPath}}.frequencyGroup" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.frequencyGroup"{{/if}} value="{{triggerRow.state.frequencyGroup}}">
+            <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.TriggerFrequencyGroup"}}</p>
+          </div>
+
+          <details class="persistent-zone-activity__advanced-conditions" data-pz-disclosure-id="trigger:{{triggerRow.uiKey}}:advanced-conditions">
+            <summary>
+              <span>{{localize "PERSISTENT_ZONES.Activity.Sections.AdvancedConditions"}}</span>
+              {{#if triggerRow.advancedConditionsSummary}}<span class="persistent-zone-activity__advanced-conditions-summary">{{triggerRow.advancedConditionsSummary}}</span>{{/if}}
+            </summary>
+            <fieldset class="persistent-zone-activity__status-guard" data-pz-status-guard data-pz-status-guard-path="{{triggerRow.fieldPath}}.requiredAbsentStatuses" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.requiredAbsentStatuses"{{/if}} data-pz-status-guard-had-value="{{#if triggerRow.hasRequiredAbsentStatuses}}true{{else}}false{{/if}}">
+              <legend>{{localize "PERSISTENT_ZONES.Activity.Fields.RequiredAbsentStatuses"}}</legend>
+              <div class="persistent-zone-activity__status-guard-tags">
+                {{#each triggerRow.requiredAbsentStatusTags as |status|}}
+                  <span class="persistent-zone-activity__status-guard-tag">{{status.label}} <button type="button" data-pz-status-guard-remove="{{status.value}}" aria-label="{{localize "PERSISTENT_ZONES.Activity.Fields.RemoveStatus"}}">×</button></span>
+                {{/each}}
+              </div>
+              {{#each triggerRow.requiredAbsentStatusTags as |status|}}<input type="hidden" name="{{../fieldPath}}.requiredAbsentStatuses" {{#if ../partId}}data-pz-part-field="triggers.{{../timing}}.requiredAbsentStatuses"{{/if}} value="{{status.value}}" data-pz-status-guard-value>{{/each}}
+              <select data-pz-status-guard-add>
+                <option value="">{{localize "PERSISTENT_ZONES.Activity.Fields.AddStatus"}}</option>
+                {{#each triggerRow.requiredAbsentStatusOptions as |option|}}
+                  {{#unless option.selected}}<option value="{{option.value}}">{{option.label}}</option>{{/unless}}
+                {{/each}}
+              </select>
+              <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.RequiredAbsentStatuses"}}</p>
+            </fieldset>
+            <fieldset class="persistent-zone-activity__status-guard" data-pz-status-guard data-pz-status-guard-path="{{triggerRow.fieldPath}}.requiredAbsentSourceStatuses" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.requiredAbsentSourceStatuses"{{/if}} data-pz-status-guard-had-value="{{#if triggerRow.hasRequiredAbsentSourceStatuses}}true{{else}}false{{/if}}">
+              <legend>{{localize "PERSISTENT_ZONES.Activity.Fields.RequiredAbsentSourceStatuses"}}</legend>
+              <div class="persistent-zone-activity__status-guard-tags">
+                {{#each triggerRow.requiredAbsentSourceStatusTags as |status|}}
+                  <span class="persistent-zone-activity__status-guard-tag">{{status.label}} <button type="button" data-pz-status-guard-remove="{{status.value}}" aria-label="{{localize "PERSISTENT_ZONES.Activity.Fields.RemoveStatus"}}">×</button></span>
+                {{/each}}
+              </div>
+              {{#each triggerRow.requiredAbsentSourceStatusTags as |status|}}<input type="hidden" name="{{../fieldPath}}.requiredAbsentSourceStatuses" {{#if ../partId}}data-pz-part-field="triggers.{{../timing}}.requiredAbsentSourceStatuses"{{/if}} value="{{status.value}}" data-pz-status-guard-value>{{/each}}
+              <select data-pz-status-guard-add>
+                <option value="">{{localize "PERSISTENT_ZONES.Activity.Fields.AddStatus"}}</option>
+                {{#each triggerRow.requiredAbsentSourceStatusOptions as |option|}}
+                  {{#unless option.selected}}<option value="{{option.value}}">{{option.label}}</option>{{/unless}}
+                {{/each}}
+              </select>
+              <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.RequiredAbsentSourceStatuses"}}</p>
+            </fieldset>
+          </details>
+
+          <fieldset class="persistent-zone-activity__trigger-effects">
+            <legend>{{localize "PERSISTENT_ZONES.Activity.Sections.Effects"}}</legend>
+            <div class="form-group">
+              <label>{{localize "PERSISTENT_ZONES.UI.Fields.TriggerMode"}}</label>
+              <select name="{{triggerRow.fieldPath}}.mode" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.mode"{{/if}}>
+                {{selectOptions ../persistentZoneChoices.triggerModes selected=triggerRow.state.mode localize=true}}
+              </select>
+            </div>
+
+          <div data-pz-mode="simple-effect">
+            <fieldset>
+              <legend>{{localize "PERSISTENT_ZONES.Activity.Sections.Damage"}}</legend>
+              <div class="form-group">
+                <label>{{localize "PERSISTENT_ZONES.Activity.Fields.DamageEnabled"}}</label>
+                <input type="checkbox" name="{{triggerRow.fieldPath}}.simpleEffect.damage.enabled" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.damage.enabled"{{/if}} data-pz-toggle-source="{{triggerRow.uiKey}}-damage" {{#if triggerRow.state.simpleEffect.damage.enabled}}checked{{/if}}>
+              </div>
+              <div data-pz-toggle-target="{{triggerRow.uiKey}}-damage">
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.UI.Fields.DamageFormula"}}</label>
+                  <input type="text" name="{{triggerRow.fieldPath}}.simpleEffect.damage.formula" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.damage.formula"{{/if}} value="{{triggerRow.state.simpleEffect.damage.formula}}">
+                </div>
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.UI.Fields.DamageType"}}</label>
+                  <select name="{{triggerRow.fieldPath}}.simpleEffect.damage.type" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.damage.type"{{/if}}>
+                    {{#each ../persistentZoneDamageTypes as |option|}}
+                      <option value="{{option.value}}" {{#if (eq option.value triggerRow.state.simpleEffect.damage.type)}}selected{{/if}}>{{option.label}}</option>
+                    {{/each}}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.Activity.Fields.DamageScaling"}}</label>
+                  <select name="{{triggerRow.fieldPath}}.simpleEffect.damage.scaling.mode" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.damage.scaling.mode"{{/if}}>
+                    <option value="none" {{#if (eq triggerRow.state.simpleEffect.damage.scaling.mode "none")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.DamageScaling.None"}}</option>
+                    <option value="per-level" {{#if (eq triggerRow.state.simpleEffect.damage.scaling.mode "per-level")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.DamageScaling.PerLevel"}}</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.Activity.Fields.DamageScalingBaseLevelMode"}}</label>
+                  <select name="{{triggerRow.fieldPath}}.simpleEffect.damage.scaling.baseLevelMode" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.damage.scaling.baseLevelMode"{{/if}}>
+                    <option value="item" {{#if (eq triggerRow.state.simpleEffect.damage.scaling.baseLevelMode "item")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.DamageScaling.ItemLevel"}}</option>
+                    <option value="fixed" {{#if (eq triggerRow.state.simpleEffect.damage.scaling.baseLevelMode "fixed")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.DamageScaling.FixedLevel"}}</option>
+                  </select>
+                </div>
+                {{#if (eq triggerRow.state.simpleEffect.damage.scaling.baseLevelMode "fixed")}}
+                  <div class="form-group">
+                    <label>{{localize "PERSISTENT_ZONES.Activity.Fields.DamageScalingBaseLevel"}}</label>
+                    <input type="number" min="1" step="1" name="{{triggerRow.fieldPath}}.simpleEffect.damage.scaling.baseLevel" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.damage.scaling.baseLevel"{{/if}} value="{{triggerRow.state.simpleEffect.damage.scaling.baseLevel}}">
+                  </div>
+                {{/if}}
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.Activity.Fields.DamageScalingPerLevelFormula"}}</label>
+                  <input type="text" name="{{triggerRow.fieldPath}}.simpleEffect.damage.scaling.perLevelFormula" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.damage.scaling.perLevelFormula"{{/if}} value="{{triggerRow.state.simpleEffect.damage.scaling.perLevelFormula}}">
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>{{localize "PERSISTENT_ZONES.Activity.Sections.Healing"}}</legend>
+              <div class="form-group">
+                <label>{{localize "PERSISTENT_ZONES.Activity.Fields.HealingEnabled"}}</label>
+                <input type="checkbox" name="{{triggerRow.fieldPath}}.simpleEffect.healing.enabled" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.healing.enabled"{{/if}} data-pz-toggle-source="{{triggerRow.uiKey}}-healing" {{#if triggerRow.state.simpleEffect.healing.enabled}}checked{{/if}}>
+              </div>
+              <div data-pz-toggle-target="{{triggerRow.uiKey}}-healing">
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.Activity.Fields.HealingFormula"}}</label>
+                  <input type="text" name="{{triggerRow.fieldPath}}.simpleEffect.healing.formula" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.healing.formula"{{/if}} value="{{triggerRow.state.simpleEffect.healing.formula}}">
+                </div>
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.Activity.Fields.DamageScaling"}}</label>
+                  <select name="{{triggerRow.fieldPath}}.simpleEffect.healing.scaling.mode" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.healing.scaling.mode"{{/if}}>
+                    <option value="none" {{#if (eq triggerRow.state.simpleEffect.healing.scaling.mode "none")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.DamageScaling.None"}}</option>
+                    <option value="per-level" {{#if (eq triggerRow.state.simpleEffect.healing.scaling.mode "per-level")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.DamageScaling.PerLevel"}}</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.Activity.Fields.DamageScalingBaseLevelMode"}}</label>
+                  <select name="{{triggerRow.fieldPath}}.simpleEffect.healing.scaling.baseLevelMode" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.healing.scaling.baseLevelMode"{{/if}}>
+                    <option value="item" {{#if (eq triggerRow.state.simpleEffect.healing.scaling.baseLevelMode "item")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.DamageScaling.ItemLevel"}}</option>
+                    <option value="fixed" {{#if (eq triggerRow.state.simpleEffect.healing.scaling.baseLevelMode "fixed")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.DamageScaling.FixedLevel"}}</option>
+                  </select>
+                </div>
+                {{#if (eq triggerRow.state.simpleEffect.healing.scaling.baseLevelMode "fixed")}}
+                  <div class="form-group">
+                    <label>{{localize "PERSISTENT_ZONES.Activity.Fields.DamageScalingBaseLevel"}}</label>
+                    <input type="number" min="1" step="1" name="{{triggerRow.fieldPath}}.simpleEffect.healing.scaling.baseLevel" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.healing.scaling.baseLevel"{{/if}} value="{{triggerRow.state.simpleEffect.healing.scaling.baseLevel}}">
+                  </div>
+                {{/if}}
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.Activity.Fields.DamageScalingPerLevelFormula"}}</label>
+                  <input type="text" name="{{triggerRow.fieldPath}}.simpleEffect.healing.scaling.perLevelFormula" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.healing.scaling.perLevelFormula"{{/if}} value="{{triggerRow.state.simpleEffect.healing.scaling.perLevelFormula}}">
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>{{localize "PERSISTENT_ZONES.Activity.Sections.TemporaryHitPoints"}}</legend>
+              <div class="form-group">
+                <label>{{localize "PERSISTENT_ZONES.Activity.Fields.TempHpEnabled"}}</label>
+                <input type="checkbox" name="{{triggerRow.fieldPath}}.simpleEffect.temporaryHitPoints.enabled" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.temporaryHitPoints.enabled"{{/if}} data-pz-toggle-source="{{triggerRow.uiKey}}-temphp" {{#if triggerRow.state.simpleEffect.temporaryHitPoints.enabled}}checked{{/if}}>
+              </div>
+              <div data-pz-toggle-target="{{triggerRow.uiKey}}-temphp">
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.Activity.Fields.TempHpFormula"}}</label>
+                  <input type="text" name="{{triggerRow.fieldPath}}.simpleEffect.temporaryHitPoints.formula" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.temporaryHitPoints.formula"{{/if}} value="{{triggerRow.state.simpleEffect.temporaryHitPoints.formula}}">
+                </div>
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.Activity.Fields.DamageScaling"}}</label>
+                  <select name="{{triggerRow.fieldPath}}.simpleEffect.temporaryHitPoints.scaling.mode" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.temporaryHitPoints.scaling.mode"{{/if}}>
+                    <option value="none" {{#if (eq triggerRow.state.simpleEffect.temporaryHitPoints.scaling.mode "none")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.DamageScaling.None"}}</option>
+                    <option value="per-level" {{#if (eq triggerRow.state.simpleEffect.temporaryHitPoints.scaling.mode "per-level")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.DamageScaling.PerLevel"}}</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.Activity.Fields.DamageScalingBaseLevelMode"}}</label>
+                  <select name="{{triggerRow.fieldPath}}.simpleEffect.temporaryHitPoints.scaling.baseLevelMode" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.temporaryHitPoints.scaling.baseLevelMode"{{/if}}>
+                    <option value="item" {{#if (eq triggerRow.state.simpleEffect.temporaryHitPoints.scaling.baseLevelMode "item")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.DamageScaling.ItemLevel"}}</option>
+                    <option value="fixed" {{#if (eq triggerRow.state.simpleEffect.temporaryHitPoints.scaling.baseLevelMode "fixed")}}selected{{/if}}>{{localize "PERSISTENT_ZONES.Activity.DamageScaling.FixedLevel"}}</option>
+                  </select>
+                </div>
+                {{#if (eq triggerRow.state.simpleEffect.temporaryHitPoints.scaling.baseLevelMode "fixed")}}
+                  <div class="form-group">
+                    <label>{{localize "PERSISTENT_ZONES.Activity.Fields.DamageScalingBaseLevel"}}</label>
+                    <input type="number" min="1" step="1" name="{{triggerRow.fieldPath}}.simpleEffect.temporaryHitPoints.scaling.baseLevel" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.temporaryHitPoints.scaling.baseLevel"{{/if}} value="{{triggerRow.state.simpleEffect.temporaryHitPoints.scaling.baseLevel}}">
+                  </div>
+                {{/if}}
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.Activity.Fields.DamageScalingPerLevelFormula"}}</label>
+                  <input type="text" name="{{triggerRow.fieldPath}}.simpleEffect.temporaryHitPoints.scaling.perLevelFormula" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.temporaryHitPoints.scaling.perLevelFormula"{{/if}} value="{{triggerRow.state.simpleEffect.temporaryHitPoints.scaling.perLevelFormula}}">
+                </div>
+              </div>
+            </fieldset>
+
+              <fieldset>
+                <legend>{{localize "PERSISTENT_ZONES.Activity.Sections.Save"}}</legend>
+              <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.Save"}}</p>
+              <div class="form-group">
+                <label>{{localize "PERSISTENT_ZONES.Activity.Fields.SaveEnabled"}}</label>
+                <input type="checkbox" name="{{triggerRow.fieldPath}}.simpleEffect.save.enabled" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.save.enabled"{{/if}} data-pz-toggle-source="{{triggerRow.uiKey}}-save" {{#if triggerRow.state.simpleEffect.save.enabled}}checked{{/if}}>
+              </div>
+              <div data-pz-toggle-target="{{triggerRow.uiKey}}-save">
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.UI.Fields.SaveAbility"}}</label>
+                  <select name="{{triggerRow.fieldPath}}.simpleEffect.save.ability" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.save.ability"{{/if}}>
+                    {{#each ../persistentZoneAbilities as |option|}}
+                      <option value="{{option.value}}" {{#if (eq option.value triggerRow.state.simpleEffect.save.ability)}}selected{{/if}}>{{option.label}}</option>
+                    {{/each}}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.UI.Fields.SaveDcMode"}}</label>
+                  <select name="{{triggerRow.fieldPath}}.simpleEffect.save.dcMode" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.save.dcMode"{{/if}}>
+                    {{selectOptions ../persistentZoneChoices.saveDcModes selected=triggerRow.state.simpleEffect.save.dcMode localize=true}}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.UI.Fields.SaveDc"}}</label>
+                  <input type="number" name="{{triggerRow.fieldPath}}.simpleEffect.save.dc" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.save.dc"{{/if}} value="{{triggerRow.state.simpleEffect.save.dc}}" min="1" step="1">
+                </div>
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.Activity.Fields.SaveResult"}}</label>
+                  <select name="{{triggerRow.fieldPath}}.simpleEffect.save.onSave" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.save.onSave"{{/if}}>
+                    {{selectOptions ../persistentZoneChoices.saveResults selected=triggerRow.state.simpleEffect.save.onSave localize=true}}
+                  </select>
+                  <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.SaveResult"}}</p>
+                </div>
+                </div>
+                <div class="form-group"><label>{{localize "PERSISTENT_ZONES.Activity.Fields.EndConcentration"}}</label><input type="checkbox" name="{{triggerRow.fieldPath}}.simpleEffect.endConcentration.enabled" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.endConcentration.enabled"{{/if}} {{#if triggerRow.state.simpleEffect.endConcentration.enabled}}checked{{/if}}></div>
+              </fieldset>
+
+            <fieldset>
+              <legend>{{localize "PERSISTENT_ZONES.Activity.Sections.Statuses"}}</legend>
+              <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.Statuses"}}</p>
+              <div class="form-group">
+                <label>{{localize "PERSISTENT_ZONES.Activity.Fields.StatusesEnabled"}}</label>
+                <input type="checkbox" name="{{triggerRow.fieldPath}}.simpleEffect.statuses.enabled" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.enabled"{{/if}} data-pz-toggle-source="{{triggerRow.uiKey}}-statuses" {{#if triggerRow.state.simpleEffect.statuses.enabled}}checked{{/if}}>
+              </div>
+              <div data-pz-toggle-target="{{triggerRow.uiKey}}-statuses">
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.Activity.Fields.StatusId"}}</label>
+                  <select name="{{triggerRow.fieldPath}}.simpleEffect.statuses.statusId" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.statusId"{{/if}}>
+                    {{#each ../persistentZoneStatusOptions as |option|}}
+                      <option value="{{option.value}}" {{#if (eq option.value triggerRow.state.simpleEffect.statuses.statusId)}}selected{{/if}}>{{option.label}}</option>
+                    {{/each}}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>{{localize "PERSISTENT_ZONES.Activity.Fields.PersistenceMode"}}</label>
+                  <select name="{{triggerRow.fieldPath}}.simpleEffect.statuses.persistenceMode" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.persistenceMode"{{/if}}>
+                    {{#if triggerRow.allowsWhileInside}}
+                      {{selectOptions ../persistentZoneChoices.persistenceModes selected=triggerRow.state.simpleEffect.statuses.persistenceMode localize=true}}
+                    {{else}}
+                      {{selectOptions ../persistentZoneChoices.exitPersistenceModes selected=triggerRow.state.simpleEffect.statuses.persistenceMode localize=true}}
+                    {{/if}}
+                  </select>
+                </div>
+                <div class="form-group"><label>{{localize "PERSISTENT_ZONES.Activity.Fields.RestrictAction"}}</label><input type="checkbox" name="{{triggerRow.fieldPath}}.simpleEffect.statuses.actionRestrictions.action" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.actionRestrictions.action"{{/if}} {{#if triggerRow.state.simpleEffect.statuses.actionRestrictions.action}}checked{{/if}}></div>
+                <div class="form-group"><label>{{localize "PERSISTENT_ZONES.Activity.Fields.RestrictBonusAction"}}</label><input type="checkbox" name="{{triggerRow.fieldPath}}.simpleEffect.statuses.actionRestrictions.bonusAction" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.actionRestrictions.bonusAction"{{/if}} {{#if triggerRow.state.simpleEffect.statuses.actionRestrictions.bonusAction}}checked{{/if}}></div>
+                <fieldset data-pz-status-recovery>
+                  <legend>{{localize "PERSISTENT_ZONES.Activity.Sections.StatusRecovery"}}</legend>
+                  <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.StatusRecovery"}}</p>
+                  <div class="form-group">
+                    <label>{{localize "PERSISTENT_ZONES.Activity.Fields.StatusRecoveryMode"}}</label>
+                    <select name="{{triggerRow.fieldPath}}.simpleEffect.statuses.recovery.mode" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.recovery.mode"{{/if}} data-pz-status-recovery-mode>
+                      {{selectOptions ../persistentZoneChoices.statusRecoveryModes selected=triggerRow.state.simpleEffect.statuses.recovery.mode localize=true}}
+                    </select>
+                  </div>
+                  <div data-pz-status-recovery-options>
+                    <div class="form-group">
+                      <label>{{localize "PERSISTENT_ZONES.Activity.Fields.StatusRecoveryAbility"}}</label>
+                      <select name="{{triggerRow.fieldPath}}.simpleEffect.statuses.recovery.ability" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.recovery.ability"{{/if}}>
+                        {{#each ../persistentZoneAbilities as |option|}}
+                          <option value="{{option.value}}" {{#if (eq option.value triggerRow.state.simpleEffect.statuses.recovery.ability)}}selected{{/if}}>{{option.label}}</option>
+                        {{/each}}
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>{{localize "PERSISTENT_ZONES.Activity.Fields.StatusRecoveryDcMode"}}</label>
+                      <select name="{{triggerRow.fieldPath}}.simpleEffect.statuses.recovery.dcMode" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.recovery.dcMode"{{/if}} data-pz-status-recovery-dc-mode>
+                        {{selectOptions ../persistentZoneChoices.statusRecoveryDcModes selected=triggerRow.state.simpleEffect.statuses.recovery.dcMode localize=true}}
+                      </select>
+                    </div>
+                    <div class="form-group" data-pz-status-recovery-custom-dc>
+                      <label>{{localize "PERSISTENT_ZONES.Activity.Fields.StatusRecoveryCustomDC"}}</label>
+                      <input type="number" name="{{triggerRow.fieldPath}}.simpleEffect.statuses.recovery.customDC" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.recovery.customDC"{{/if}} value="{{triggerRow.state.simpleEffect.statuses.recovery.customDC}}" min="1" step="1">
+                    </div>
+                  </div>
+                </fieldset>
+                <fieldset data-pz-status-escape>
+                  <legend>{{localize "PERSISTENT_ZONES.Activity.Sections.StatusEscape"}}</legend>
+                  <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.StatusEscape"}}</p>
+                  <div class="form-group">
+                    <label>{{localize "PERSISTENT_ZONES.Activity.Fields.StatusEscapeEnabled"}}</label>
+                    <input type="checkbox" name="{{triggerRow.fieldPath}}.simpleEffect.statuses.escape.enabled" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.escape.enabled"{{/if}} data-pz-status-escape-enabled {{#if triggerRow.state.simpleEffect.statuses.escape.enabled}}checked{{/if}}>
+                  </div>
+                  <div data-pz-status-escape-options>
+                    <input type="hidden" name="{{triggerRow.fieldPath}}.simpleEffect.statuses.escape.actionType" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.escape.actionType"{{/if}} value="action">
+                    <div class="form-group">
+                      <label>{{localize "PERSISTENT_ZONES.Activity.Fields.StatusEscapeCheckType"}}</label>
+                      <select name="{{triggerRow.fieldPath}}.simpleEffect.statuses.escape.checkType" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.escape.checkType"{{/if}} data-pz-status-escape-check-type>
+                        {{selectOptions ../persistentZoneChoices.statusEscapeCheckTypes selected=triggerRow.state.simpleEffect.statuses.escape.checkType localize=true}}
+                      </select>
+                    </div>
+                    <div class="form-group" data-pz-status-escape-check="ability">
+                      <label>{{localize "PERSISTENT_ZONES.Activity.Fields.StatusEscapeAbility"}}</label>
+                      <select name="{{triggerRow.fieldPath}}.simpleEffect.statuses.escape.ability" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.escape.ability"{{/if}}>
+                        {{#each ../persistentZoneAbilities as |option|}}
+                          <option value="{{option.value}}" {{#if (eq option.value triggerRow.state.simpleEffect.statuses.escape.ability)}}selected{{/if}}>{{option.label}}</option>
+                        {{/each}}
+                      </select>
+                    </div>
+                    <div class="form-group" data-pz-status-escape-check="skill">
+                      <label>{{localize "PERSISTENT_ZONES.Activity.Fields.StatusEscapeSkill"}}</label>
+                      <select name="{{triggerRow.fieldPath}}.simpleEffect.statuses.escape.skill" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.escape.skill"{{/if}}>
+                        {{#each ../persistentZoneSkills as |option|}}
+                          <option value="{{option.value}}" {{#if (eq option.value triggerRow.state.simpleEffect.statuses.escape.skill)}}selected{{/if}}>{{option.label}}</option>
+                        {{/each}}
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>{{localize "PERSISTENT_ZONES.Activity.Fields.StatusEscapeDcMode"}}</label>
+                      <select name="{{triggerRow.fieldPath}}.simpleEffect.statuses.escape.dcMode" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.escape.dcMode"{{/if}} data-pz-status-escape-dc-mode>
+                        {{selectOptions ../persistentZoneChoices.statusEscapeDcModes selected=triggerRow.state.simpleEffect.statuses.escape.dcMode localize=true}}
+                      </select>
+                    </div>
+                    <div class="form-group" data-pz-status-escape-custom-dc>
+                      <label>{{localize "PERSISTENT_ZONES.Activity.Fields.StatusEscapeCustomDC"}}</label>
+                      <input type="number" name="{{triggerRow.fieldPath}}.simpleEffect.statuses.escape.customDC" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.escape.customDC"{{/if}} value="{{triggerRow.state.simpleEffect.statuses.escape.customDC}}" min="1" step="1">
+                    </div>
+                    <div class="form-group">
+                      <label>{{localize "PERSISTENT_ZONES.Activity.Fields.StatusEscapeRemove"}}</label>
+                      <input type="checkbox" name="{{triggerRow.fieldPath}}.simpleEffect.statuses.escape.removeOnSuccess" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.escape.removeOnSuccess"{{/if}} {{#if triggerRow.state.simpleEffect.statuses.escape.removeOnSuccess}}checked{{/if}}>
+                    </div>
+                    <div class="form-group">
+                      <label>{{localize "PERSISTENT_ZONES.Activity.Fields.StatusEscapePrompt"}}</label>
+                      <input type="checkbox" name="{{triggerRow.fieldPath}}.simpleEffect.statuses.escape.prompt.enabled" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.escape.prompt.enabled"{{/if}} {{#if triggerRow.state.simpleEffect.statuses.escape.prompt.enabled}}checked{{/if}}>
+                    </div>
+                    <div class="form-group">
+                      <label>{{localize "PERSISTENT_ZONES.Activity.Fields.StatusEscapePromptTitle"}}</label>
+                      <input type="text" name="{{triggerRow.fieldPath}}.simpleEffect.statuses.escape.prompt.title" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.escape.prompt.title"{{/if}} value="{{triggerRow.state.simpleEffect.statuses.escape.prompt.title}}">
+                    </div>
+                    <div class="form-group">
+                      <label>{{localize "PERSISTENT_ZONES.Activity.Fields.StatusEscapePromptMessage"}}</label>
+                      <input type="text" name="{{triggerRow.fieldPath}}.simpleEffect.statuses.escape.prompt.message" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.simpleEffect.statuses.escape.prompt.message"{{/if}} value="{{triggerRow.state.simpleEffect.statuses.escape.prompt.message}}">
+                    </div>
+                  </div>
+                </fieldset>
+              </div>
+            </fieldset>
+          </div>
+
+          <div data-pz-mode="linked-activity">
+            <div class="form-group">
+              <label>{{localize "PERSISTENT_ZONES.Activity.Fields.LinkedActivity"}}</label>
+              <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.LinkedActivity"}}</p>
+              <select name="{{triggerRow.fieldPath}}.linkedActivity.id" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.linkedActivity.id"{{/if}}>
+                {{#each triggerRow.linkedActivityOptions as |option|}}
+                  <option value="{{option.value}}" data-uuid="{{option.uuid}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>
+                {{/each}}
+              </select>
+              <input type="hidden" name="{{triggerRow.fieldPath}}.linkedActivity.uuid" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.linkedActivity.uuid"{{/if}} value="{{triggerRow.state.linkedActivity.uuid}}">
+            </div>
+          </div>
+          </fieldset>
+        </div>
+        </div>
+      </details>
+    {{/each}}
