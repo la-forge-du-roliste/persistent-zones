@@ -17,7 +17,7 @@ import {
 globalThis.foundry ??= { utils: { deepClone: structuredClone } };
 
 test("accepts versioned built-in presets", () => {
-  assert.equal(BUILTIN_PRESETS.length, 40);
+  assert.equal(BUILTIN_PRESETS.length, 41);
   for (const candidate of BUILTIN_PRESETS) {
     const preset = normalizePreset(candidate);
     assert.ok(preset);
@@ -305,7 +305,7 @@ test("visible library separates validated SRD and debug movement-cost presets", 
   const ids = getBuiltinPersistentZonePresets().map(({ id }) => id).sort();
   assert.deepEqual(ids, [
     "debug.controlled-zone-movement", "debug.damage-scaling-3d8", "debug.damage-scaling-constant", "debug.geometry-units-ui", "debug.healing-scaling", "debug.linked-distance-units-ui", "debug.midi-qol-resolution",
-    "debug.movement-cost-x2", "debug.movement-cost-x4", "debug.movement-cost-x4-walls", "debug.multipart-ui-scaling", "debug.native-resolution", "debug.physical-contact-proximity", "debug.radius-scaling-ui", "debug.rectangle-walls", "debug.rectangle-walls-terrain", "debug.temporary-hit-points-scaling",
+    "debug.movement-cost-x2", "debug.movement-cost-x4", "debug.movement-cost-x4-walls", "debug.multipart-geometry-units-ui", "debug.multipart-ui-scaling", "debug.native-resolution", "debug.physical-contact-proximity", "debug.radius-scaling-ui", "debug.rectangle-walls", "debug.rectangle-walls-terrain", "debug.temporary-hit-points-scaling",
     "debug.terrain-x4-allies", "debug.terrain-x4-enemies", "debug.terrain-x4-enemies-walls", "debug.terrain-x4-others", "debug.terrain-x4-self", "debug.token-membership-50", "debug.zone-translation",
     "srd-5.2.1.black-tentacles", "srd-5.2.1.cloudkill", "srd-5.2.1.entangle", "srd-5.2.1.flaming-sphere", "srd-5.2.1.fog-cloud", "srd-5.2.1.grease",
     "srd-5.2.1.insect-plague", "srd-5.2.1.moonbeam", "srd-5.2.1.sleet-storm", "srd-5.2.1.spike-growth", "srd-5.2.1.spirit-guardians-necrotic", "srd-5.2.1.spirit-guardians-radiant",
@@ -314,7 +314,7 @@ test("visible library separates validated SRD and debug movement-cost presets", 
   assert.equal(ids.some((id) => id.startsWith("builtin.")), false);
   for (const id of [
     "debug.damage-scaling-3d8", "debug.damage-scaling-constant", "debug.geometry-units-ui", "debug.healing-scaling", "debug.midi-qol-resolution", "debug.temporary-hit-points-scaling",
-    "debug.movement-cost-x2", "debug.movement-cost-x4", "debug.movement-cost-x4-walls", "debug.multipart-ui-scaling", "debug.native-resolution", "debug.physical-contact-proximity", "debug.rectangle-walls", "debug.rectangle-walls-terrain",
+    "debug.movement-cost-x2", "debug.movement-cost-x4", "debug.movement-cost-x4-walls", "debug.multipart-geometry-units-ui", "debug.multipart-ui-scaling", "debug.native-resolution", "debug.physical-contact-proximity", "debug.rectangle-walls", "debug.rectangle-walls-terrain",
     "debug.controlled-zone-movement", "debug.linked-distance-units-ui", "debug.radius-scaling-ui", "debug.terrain-x4-allies", "debug.terrain-x4-enemies", "debug.terrain-x4-enemies-walls", "debug.terrain-x4-others", "debug.terrain-x4-self", "debug.token-membership-50", "debug.zone-translation"
   ]) {
     const preset = getPersistentZonePreset(id);
@@ -359,6 +359,18 @@ test("geometry units UI Debug/Test preset resolves its ready-to-place circle in 
     grid: { units: "m", distance: 1.5, size: 100 }
   });
   assert.deepEqual(metric.geometry, { type: "circle", radius: 3, units: "m" });
+});
+
+test("multipart geometry units UI Debug/Test preset resolves derived distances in metric scenes", () => {
+  const preset = getPersistentZonePreset("debug.multipart-geometry-units-ui");
+  assert.equal(preset.category, "debug-tests");
+  assert.equal(preset.persistentZone.parts.length, 2);
+  const metric = resolvePresetPersistentZoneForScene(preset.persistentZone, {
+    grid: { units: "m", distance: 1.5, size: 100 }
+  });
+  assert.equal(metric.geometry.units, "m");
+  assert.equal(metric.parts[1].geometry.offsetStart, 1.5);
+  assert.equal(metric.parts[1].geometry.offsetEnd, 3);
 });
 
 test("token membership Debug/Test preset is visible and neutral", () => {

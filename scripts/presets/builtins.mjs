@@ -476,6 +476,21 @@ const buildGeometryUnitsUiDebugPreset = () => base({
   triggers: buildDisabledTriggers()
 });
 
+const buildMultipartGeometryUnitsUiDebugPreset = () => base({
+  id: "debug.multipart-geometry-units-ui",
+  name: "PERSISTENT_ZONES.Activity.Presets.Debug.MultipartGeometryUnitsUi.Name",
+  description: "PERSISTENT_ZONES.Activity.Presets.Debug.MultipartGeometryUnitsUi.Description",
+  category: "debug-tests",
+  geometry: { type: "ring", ringReferenceRadius: 10, ringInnerWidth: 5, ringOuterWidth: 0, units: "ft" },
+  obstacles: { mode: "unrestricted" },
+  terrain: { enabled: false, multiplier: 2 },
+  triggers: buildDisabledTriggers(),
+  parts: [
+    { id: "body", label: "A", role: "primary", geometry: { type: "template" }, terrain: { enabled: false }, triggers: buildDisabledTriggers() },
+    { id: "outer", label: "B", role: "secondary", geometry: { type: "side-of-ring", referencePartId: "body", side: "outer", offsetStart: 5, offsetEnd: 10 }, terrain: { enabled: false }, triggers: buildDisabledTriggers() }
+  ]
+});
+
 const buildTokenMembershipDebugPreset = () => base({
   id: "debug.token-membership-50",
   name: "PERSISTENT_ZONES.Activity.Presets.Debug.TokenMembership50.Name",
@@ -565,6 +580,7 @@ const buildRecoveryScalingDebugPreset = ({ id, name, description, recoveryType, 
 };
 
 export const BUILTIN_PRESETS = Object.freeze([
+  buildMultipartGeometryUnitsUiDebugPreset(),
   buildGeometryUnitsUiDebugPreset(),
   buildRadiusScalingUiDebugPreset(),
   buildLinkedDistanceUnitsDebugPreset(),

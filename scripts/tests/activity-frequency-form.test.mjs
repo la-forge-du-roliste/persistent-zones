@@ -431,6 +431,8 @@ test("Difficult Terrain and trigger summary copy is localized in EN and FR", () 
   assert.equal(fr.PERSISTENT_ZONES.Activity.Presets.Debug.RadiusScalingUi.Name, "Debug/Test — Scaling du rayon");
   assert.equal(en.PERSISTENT_ZONES.Activity.Presets.Debug.GeometryUnitsUi.Name, "Debug/Test — Geometry Units");
   assert.equal(fr.PERSISTENT_ZONES.Activity.Presets.Debug.GeometryUnitsUi.Name, "Debug/Test — Unités de géométrie");
+  assert.equal(en.PERSISTENT_ZONES.Activity.Presets.Debug.MultipartGeometryUnitsUi.Name, "Debug/Test — Multipart Geometry Units");
+  assert.equal(fr.PERSISTENT_ZONES.Activity.Presets.Debug.MultipartGeometryUnitsUi.Name, "Debug/Test — Unités géométrie multipart");
   assert.equal(en.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentStatuses, "Affected Creature Statuses");
   assert.equal(fr.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentStatuses, "Statuts de la créature affectée");
   assert.equal(en.PERSISTENT_ZONES.Activity.Fields.RequiredAbsentSourceStatuses, "Statuses Already Applied by This Zone");
@@ -498,6 +500,34 @@ test("every editable main geometry dimension displays its configured unit", () =
     assert.notEqual(inputIndex, -1, field);
     assert.match(template.slice(Math.max(0, inputIndex - 500), inputIndex), /persistentZoneGeometryUnitLabel/);
   }
+});
+
+test("multipart derived geometry gap and width display their main geometry unit", () => {
+  const sheet = new PersistentZoneActivitySheet();
+  sheet.activity = {
+    _source: { persistentZone: structuredClone(getPersistentZonePreset("debug.multipart-geometry-units-ui").persistentZone) },
+    item: { system: { activities: new Map() } }
+  };
+  const context = sheet._preparePersistentZoneContext({ tabs: { persistentZone: {} } });
+  assert.deepEqual(context.persistentZonePartRows.map(({ unitLabel }) => unitLabel), ["ft", "ft"]);
+  const previousScene = globalThis.canvas.scene;
+  globalThis.canvas.scene = { grid: { units: "m", distance: 1.5, size: 100 } };
+  try {
+    const metric = getPersistentZonePreset("debug.multipart-geometry-units-ui").persistentZone;
+    metric.geometry.units = "m";
+    metric.parts[1].geometry.offsetStart = 1.5;
+    metric.parts[1].geometry.offsetEnd = 3;
+    sheet.activity._source.persistentZone = metric;
+    const metricContext = sheet._preparePersistentZoneContext({ tabs: { persistentZone: {} } });
+    assert.deepEqual(metricContext.persistentZonePartRows.map(({ unitLabel }) => unitLabel), ["m", "m"]);
+    assert.equal(metricContext.persistentZonePartRows[1].gap, 1.5);
+    assert.equal(metricContext.persistentZonePartRows[1].width, 1.5);
+  } finally {
+    globalThis.canvas.scene = previousScene;
+  }
+  const template = fs.readFileSync(new URL("../../templates/persistent-zone-activity-tab.hbs", import.meta.url), "utf8");
+  assert.match(template, /Parts\.Gap"}} \(\{\{partRow\.unitLabel}}\)/);
+  assert.match(template, /Parts\.Width"}} \(\{\{partRow\.unitLabel}}\)/);
 });
 
 test("Controlled Movement displays a linked Activity name, never its technical identifier", () => {

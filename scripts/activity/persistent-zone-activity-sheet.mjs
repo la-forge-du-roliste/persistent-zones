@@ -108,7 +108,8 @@ export class PersistentZoneActivitySheet extends dnd5e.applications.activity.Act
       rawParts,
       context.persistentZone?.geometry?.type,
       this.activity,
-      context.persistentZone?.triggers
+      context.persistentZone?.triggers,
+      context.persistentZone?.geometry?.units
     );
     const presets = getBuiltinPersistentZonePresets();
     const selectedPreset = getPersistentZonePreset(this.#selectedPresetId);
@@ -855,7 +856,7 @@ function validateMultipartParts(parts, existingParts = [], { mode = "strict" } =
   return editingErrors;
 }
 
-function buildMultipartPartRows(parts = [], mainGeometryType = "circle", activity = null, globalTriggers = null) {
+function buildMultipartPartRows(parts = [], mainGeometryType = "circle", activity = null, globalTriggers = null, mainGeometryUnits = "scene") {
   const supportedDerivedGeometryType = resolveSupportedDerivedMultipartGeometryType(mainGeometryType);
   return Array.from(parts ?? []).map((part, index) => {
     const geometryType = String(part?.geometry?.type ?? "template");
@@ -905,6 +906,7 @@ function buildMultipartPartRows(parts = [], mainGeometryType = "circle", activit
       sideOptions: buildMultipartSideOptions(geometryType, part?.geometry?.side),
       gap: distances.gap,
       width: distances.width,
+      unitLabel: getConfiguredDistanceUnitLabel(mainGeometryUnits),
       elevation,
       terrainEnabled: Boolean(part?.terrain?.enabled),
       terrainMultiplier: normalizeMovementCostMultiplier(part?.terrain?.multiplier),

@@ -112,12 +112,12 @@
                   {{/if}}
                 </div>
                 <div class="form-group">
-                  <label>{{localize "PERSISTENT_ZONES.Activity.Parts.Gap"}}</label>
+                  <label>{{localize "PERSISTENT_ZONES.Activity.Parts.Gap"}} ({{partRow.unitLabel}})</label>
                   <input type="number" name="persistentZone.parts.{{partRow.index}}.geometry.gap" value="{{partRow.gap}}" min="0" step="any" data-pz-part-field="geometry.gap" {{#unless partRow.derivedGeometry}}disabled{{/unless}}>
                   <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.PartGap"}}</p>
                 </div>
                 <div class="form-group">
-                  <label>{{localize "PERSISTENT_ZONES.Activity.Parts.Width"}}</label>
+                  <label>{{localize "PERSISTENT_ZONES.Activity.Parts.Width"}} ({{partRow.unitLabel}})</label>
                   <input type="number" name="persistentZone.parts.{{partRow.index}}.geometry.width" value="{{partRow.width}}" min="0.000001" step="any" data-pz-part-field="geometry.width" {{#unless partRow.derivedGeometry}}disabled{{/unless}}>
                   <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.PartWidth"}}</p>
                 </div>
