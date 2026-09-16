@@ -5,6 +5,7 @@ import {
   RUNTIME_FLAG_KEY,
   TOKEN_MEMBERSHIP_MODE_SETTING_KEY
 } from "../constants.mjs";
+import { testTargetVisibleToSourceToken } from "./source-visibility.mjs";
 
 const PERSISTENT_ZONES_LOG_LEVEL_PRIORITY = Object.freeze({
   minimal: 0,
@@ -777,16 +778,23 @@ export function evaluateTriggerTargetFilter({
     globalResult
   };
 
+  const applySourceVisibility = (result) => {
+    if (!result.allowed || !triggerConfig?.requireSourceVisibility) return result;
+    if (!sourceTokenUuid || !sourceToken) return { ...result, allowed: false, reason: "source-token-unavailable-for-visibility" };
+    const visibility = testTargetVisibleToSourceToken(sourceToken, tokenDocument);
+    return { ...result, allowed: visibility.visible, reason: visibility.reason, sourceVisibility: visibility };
+  };
+
   if (!globalResult.allowed) return { ...baseResult, reason: "global-target-filter-rejected" };
-  if (mode === "all") return { ...baseResult, allowed: true, reason: "all-targets" };
+  if (mode === "all") return applySourceVisibility({ ...baseResult, allowed: true, reason: "all-targets" });
   if (!sourceTokenUuid) return { ...baseResult, reason: "source-token-identity-unavailable" };
 
   const sameToken = Boolean(targetTokenUuid && targetTokenUuid === sourceTokenUuid);
   if (mode === "self") {
-    return { ...baseResult, allowed: sameToken, reason: sameToken ? "source-token" : "different-token" };
+    return applySourceVisibility({ ...baseResult, allowed: sameToken, reason: sameToken ? "source-token" : "different-token" });
   }
   if (mode === "others") {
-    return { ...baseResult, allowed: !sameToken, reason: sameToken ? "source-token-excluded" : "different-token" };
+    return applySourceVisibility({ ...baseResult, allowed: !sameToken, reason: sameToken ? "source-token-excluded" : "different-token" });
   }
   if (sourceDisposition === null) return { ...baseResult, reason: "source-disposition-unavailable" };
 
@@ -800,10 +808,10 @@ export function evaluateTriggerTargetFilter({
   }
   if (mode === "allies") {
     const allowed = sourceCamp === targetCamp;
-    return { ...baseResult, allowed, reason: allowed ? "same-disposition" : "opposite-disposition" };
+    return applySourceVisibility({ ...baseResult, allowed, reason: allowed ? "same-disposition" : "opposite-disposition" });
   }
   const allowed = sourceCamp !== targetCamp;
-  return { ...baseResult, allowed, reason: allowed ? "opposite-disposition" : "same-disposition" };
+  return applySourceVisibility({ ...baseResult, allowed, reason: allowed ? "opposite-disposition" : "same-disposition" });
 }
 
 export function normalizeTriggerTargetFilterMode(value) {

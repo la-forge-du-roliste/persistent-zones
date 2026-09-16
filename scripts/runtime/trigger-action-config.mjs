@@ -15,6 +15,7 @@ export function resolveTriggerActionConfiguration({
   return {
     mode,
     targetFilter: { mode: normalizeTriggerTargetFilterMode(config.targetFilter?.mode) },
+    requireSourceVisibility: Boolean(config.requireSourceVisibility),
     targeting: normalizeTriggerTargeting(config.targeting),
     frequency: normalizeTriggerFrequency(config.frequency),
     frequencyGroup: String(config.frequencyGroup ?? "").trim() || null,

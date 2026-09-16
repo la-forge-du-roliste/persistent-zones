@@ -23,6 +23,11 @@
             </select>
           </div>
           <div class="form-group">
+            <label>{{localize "PERSISTENT_ZONES.Activity.Fields.RequireSourceVisibility"}}</label>
+            <input type="checkbox" name="{{triggerRow.fieldPath}}.requireSourceVisibility" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.requireSourceVisibility"{{/if}} {{#if triggerRow.state.requireSourceVisibility}}checked{{/if}}>
+            <p class="hint">{{localize "PERSISTENT_ZONES.Activity.Help.RequireSourceVisibility"}}</p>
+          </div>
+          <div class="form-group">
             <label>{{localize "PERSISTENT_ZONES.Activity.Fields.TriggerTargeting"}}</label>
             <select name="{{triggerRow.fieldPath}}.targeting.mode" {{#if triggerRow.partId}}data-pz-part-field="triggers.{{triggerRow.timing}}.targeting.mode"{{/if}} data-pz-trigger-targeting>
               {{#each triggerRow.targetingOptions as |option|}}

@@ -345,6 +345,7 @@ function createTriggerSchema(fields, enabledInitial, exitTrigger) {
         choices: ["all", "allies", "enemies", "self", "others"]
       })
     }),
+    requireSourceVisibility: new fields.BooleanField({ required: false, initial: false }),
     targeting: new fields.SchemaField({
       mode: new fields.StringField({ required: false, initial: "membership", choices: ["membership", "physical-contact", "proximity"] }),
       distance: new fields.NumberField({ required: false, nullable: true, initial: null })

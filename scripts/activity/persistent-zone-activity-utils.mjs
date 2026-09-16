@@ -498,6 +498,7 @@ function buildTriggerConfig(triggerSource = {}, {
     mode,
     triggerId,
     targetFilter: { mode: normalizeTriggerTargetFilterMode(trigger.targetFilter?.mode) },
+    requireSourceVisibility: Boolean(trigger.requireSourceVisibility),
     targeting: normalizeTriggerTargeting(trigger.targeting),
     frequency: String(trigger.frequency ?? "unlimited").trim().toLowerCase() === "once-per-turn" ? "once-per-turn" : "unlimited",
     frequencyGroup: String(trigger.frequencyGroup ?? "").trim() || null,

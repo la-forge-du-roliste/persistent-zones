@@ -379,6 +379,28 @@ const buildPhysicalTargetingDebugPreset = () => base({
   }
 });
 
+const buildSourceVisibilityDebugPreset = () => base({
+  id: "debug.source-visibility",
+  name: "PERSISTENT_ZONES.Activity.Presets.Debug.SourceVisibility.Name",
+  description: "PERSISTENT_ZONES.Activity.Presets.Debug.SourceVisibility.Description",
+  category: "debug-tests",
+  geometry: { type: "circle", radius: 20, units: "ft" },
+  // Leave the Region unrestricted so a wall tests sight, not membership.
+  obstacles: { mode: "unrestricted" },
+  terrain: { enabled: false, multiplier: 2 },
+  triggers: {
+    ...buildDisabledTriggers(),
+    turnStart: {
+      ...buildDisabledTrigger(),
+      enabled: true,
+      mode: "simple-effect",
+      targetFilter: { mode: "others" },
+      requireSourceVisibility: true,
+      debugFeedback: true
+    }
+  }
+});
+
 const buildMultipartUiScalingDebugPreset = () => base({
   id: "debug.multipart-ui-scaling",
   name: "PERSISTENT_ZONES.Activity.Presets.Debug.MultipartUiScaling.Name",
@@ -588,6 +610,7 @@ export const BUILTIN_PRESETS = Object.freeze([
   buildZoneTranslationDebugPreset(),
   buildControlledMovementDebugPreset(),
   buildPhysicalTargetingDebugPreset(),
+  buildSourceVisibilityDebugPreset(),
   buildTokenMembershipDebugPreset(),
   buildNativeResolutionDebugPreset(),
   buildMidiResolutionDebugPreset(),

@@ -176,7 +176,7 @@ test("Activity template contains one static control per scalar Persistent Zone p
   assert.ok(names.includes("persistentZone.controlledMovement.physicalRadius"));
   assert.ok(names.includes("persistentZone.translation.enabled"));
   assert.ok(names.includes("persistentZone.translation.distance"));
-  for (const binding of ["targeting.mode", "targeting.distance", "requiredAbsentStatuses",
+  for (const binding of ["targeting.mode", "targeting.distance", "requireSourceVisibility", "requiredAbsentStatuses",
     "requiredAbsentSourceStatuses", "simpleEffect.damage.enabled", "simpleEffect.damage.formula",
     "simpleEffect.save.enabled", "simpleEffect.statuses.enabled"]) {
     assert.ok(triggers.includes(`{{triggerRow.fieldPath}}.${binding}`), `shared trigger editor retains ${binding}`);

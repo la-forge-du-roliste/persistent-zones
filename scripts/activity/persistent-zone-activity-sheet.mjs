@@ -1304,6 +1304,7 @@ function normalizeActivityTrigger(trigger = {}, triggerId, {
     enabled: trigger.enabled ?? enabledDefault,
     mode,
     targetFilter: { mode: normalizeTriggerTargetFilterMode(trigger.targetFilter?.mode) },
+    requireSourceVisibility: Boolean(trigger.requireSourceVisibility),
     targeting: normalizeUiTriggerTargeting(trigger.targeting),
     frequency: String(trigger.frequency ?? "unlimited").trim().toLowerCase() === "once-per-turn" ? "once-per-turn" : "unlimited",
     frequencyGroup: String(trigger.frequencyGroup ?? ""),
@@ -1694,6 +1695,7 @@ function buildTriggerRowSummary(state = {}, targeting = {}, unitLabel = "") {
     fragments.push(`${Number(targeting.distance)}${unitLabel ? ` ${unitLabel}` : ""}`);
   }
   fragments.push(resolveTriggerTargetFilterLabel(state.targetFilter?.mode));
+  if (state.requireSourceVisibility) fragments.push(localize("PERSISTENT_ZONES.Activity.Fields.RequireSourceVisibility"));
   const simple = state.simpleEffect ?? {};
   for (const damage of normalizeSummaryEffectEntries(simple.damage)) {
     if (damage?.enabled && damage.formula) {

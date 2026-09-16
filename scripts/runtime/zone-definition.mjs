@@ -1921,6 +1921,7 @@ function normalizeTriggerConfig(triggerLikeDefinition, dc, {
     enabled,
     mode: enabled ? mode : "none",
     targetFilter: { mode: normalizeTriggerTargetFilterMode(definition.targetFilter?.mode) },
+    requireSourceVisibility: Boolean(definition.requireSourceVisibility),
     targeting: normalizeTriggerTargeting(definition.targeting),
     frequency: normalizeTriggerFrequency(definition.frequency),
     frequencyGroup: String(definition.frequencyGroup ?? "").trim() || null,
