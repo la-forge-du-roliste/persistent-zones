@@ -1,5 +1,5 @@
 import { MODULE_ID, RUNTIME_FLAG_KEY } from "../constants.mjs";
-import { applyConfiguredTriggerEffect } from "./entry-effects.mjs";
+import { applyConfiguredTriggerEffect, applyConfiguredTriggerEffectsBatch } from "./entry-effects.mjs";
 import {
   evaluateManagedRegionTargetFilter,
   getRegionRuntimeFlags,
@@ -14,6 +14,7 @@ export async function applyRegionOnCreateTrigger(regionDocument, {
   collectCandidates = collectOnCreateCandidateTokens,
   testInside = null,
   applyEffect = applyConfiguredTriggerEffect,
+  applyBatch = applyConfiguredTriggerEffectsBatch,
   settle = settleOnCreateGeometry
 } = {}) {
   const initialRuntime = getRegionRuntimeFlags(regionDocument) ?? {};
@@ -44,23 +45,31 @@ export async function applyRegionOnCreateTrigger(regionDocument, {
       insideTokens = candidates.filter((tokenDocument) => tokenDocument?.actor && occupancyTest(tokenDocument, regionDocument));
     }
 
-    const effectAttemptTokenIds = [];
-    let appliedCount = 0;
-    let blockedCount = 0;
+    const effectTargets = [];
     for (const tokenDocument of insideTokens) {
       const filterResult = evaluateManagedRegionTargetFilter(tokenDocument, regionDocument, normalizedDefinition);
       if (!filterResult.allowed) continue;
-      effectAttemptTokenIds.push(tokenDocument.id);
-      const result = await applyEffect({
+      effectTargets.push(tokenDocument);
+    }
+    const effectAttemptTokenIds = effectTargets.map(({ id }) => id);
+    const sharedResolution = { damage: null };
+    const effectResults = applyEffect === applyConfiguredTriggerEffect
+      ? await applyBatch({
+        regionDocument,
+        tokenDocuments: effectTargets,
+        triggerConfig,
+        timing: "onCreate",
+        context: { triggerType: "onCreate", previousInside: false, currentInside: true }
+      })
+      : await Promise.all(effectTargets.map((tokenDocument) => applyEffect({
         regionDocument,
         tokenDocument,
         triggerConfig,
         timing: "onCreate",
-        context: { triggerType: "onCreate", previousInside: false, currentInside: true }
-      });
-      if (result?.applied && !result?.skipped) appliedCount += 1;
-      else if (result?.frequencyReason === "already-applied-this-turn") blockedCount += 1;
-    }
+        context: { triggerType: "onCreate", previousInside: false, currentInside: true, sharedResolution }
+      })));
+    const appliedCount = effectResults.filter((result) => result?.applied && !result?.skipped).length;
+    const blockedCount = effectResults.filter((result) => result?.frequencyReason === "already-applied-this-turn").length;
 
     await markOnCreateCompleted(regionDocument);
     const skipReason = appliedCount > 0 ? null

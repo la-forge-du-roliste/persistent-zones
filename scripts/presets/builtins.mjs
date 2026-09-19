@@ -544,6 +544,26 @@ const buildDamageScalingDebugPreset = ({ id, name, description, formula, perLeve
   }
 });
 
+const buildSharedOnCreateScalingDebugPreset = () => base({
+  id: "debug.shared-on-create-scaling",
+  name: "PERSISTENT_ZONES.Activity.Presets.Debug.SharedOnCreateScaling.Name",
+  description: "PERSISTENT_ZONES.Activity.Presets.Debug.SharedOnCreateScaling.Description",
+  category: "debug-tests",
+  geometry: { type: "circle", radius: 20, units: "ft" },
+  obstacles: { mode: "unrestricted" },
+  terrain: { enabled: false, multiplier: 2 },
+  triggers: {
+    ...buildDisabledTriggers(),
+    onCreate: buildDamageTrigger({
+      formula: "5d8",
+      type: "force",
+      ability: "dex",
+      half: true,
+      scaling: { mode: "per-level", baseLevelMode: "item", baseLevel: 4, perLevelFormula: "1d8" }
+    })
+  }
+});
+
 const buildNativeResolutionDebugPreset = () => base({
   id: "debug.native-resolution",
   name: "PERSISTENT_ZONES.Activity.Presets.Debug.NativeResolution.Name",
@@ -611,6 +631,7 @@ export const BUILTIN_PRESETS = Object.freeze([
   buildControlledMovementDebugPreset(),
   buildPhysicalTargetingDebugPreset(),
   buildSourceVisibilityDebugPreset(),
+  buildSharedOnCreateScalingDebugPreset(),
   buildTokenMembershipDebugPreset(),
   buildNativeResolutionDebugPreset(),
   buildMidiResolutionDebugPreset(),

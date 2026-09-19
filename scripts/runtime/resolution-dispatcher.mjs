@@ -10,13 +10,13 @@ export function getResolutionEngine() {
 }
 
 /** Select one resolver. Native execution remains in the existing PZ path. */
-export async function resolveResolutionRequest({ request, sourceActor, sourceToken, targetToken, save, damage } = {}) {
+export async function resolveResolutionRequest({ request, sourceActor, sourceToken, targetToken, targetTokens = null, save, damage } = {}) {
   if (getResolutionEngine() !== RESOLUTION_ENGINES.midiQol) return { status: "native", engine: RESOLUTION_ENGINES.native, request };
   if (!isMidiResolutionAvailable()) {
     notifyMidiFallbackOnce();
     return { status: "native", engine: RESOLUTION_ENGINES.native, fallback: "midi-unavailable", request };
   }
-  return resolveMidiResolution({ sourceActor, sourceToken, targetToken, save, damage });
+  return resolveMidiResolution({ sourceActor, sourceToken, targetToken, targetTokens, save, damage });
 }
 
 function notifyMidiFallbackOnce() {

@@ -15,6 +15,7 @@ test("synthetic Midi save Activity uses the D&D5e save schema and anti-recursion
   assert.deepEqual(activity.save.ability, ["dex"]);
   assert.equal(activity.save.dc.formula, "14");
   assert.equal(activity.damage.onSave, "half");
+  assert.equal(activity.target.affects.count, "");
   assert.equal(activity.damage.parts[0].custom.formula, "2d6");
   assert.equal(resolver.isPersistentZonesSyntheticResolution(activity), true);
 });
@@ -27,6 +28,17 @@ test("synthetic Midi damage-only Activity has no save and retains typed damage",
   assert.equal(activity.save, undefined);
   assert.equal(activity.damage.parts[0].custom.formula, "3d8");
   assert.deepEqual(activity.damage.parts[0].types, ["poison"]);
+});
+
+test("synthetic Midi save Activity preserves every resolved slot-scaling increment", () => {
+  globalThis.foundry = { utils: { randomID: () => "scaled-id" } };
+  for (const formula of ["5d8", "5d8 + 1d8", "5d8 + 1d8 + 1d8"]) {
+    const item = resolver.buildMidiResolutionItemData({
+      save: { enabled: true, ability: "dex", dc: 15, onSuccess: "half" },
+      damage: { enabled: true, formula, type: "force" }
+    });
+    assert.equal(item.system.activities["scaled-id"].damage.parts[0].custom.formula, formula);
+  }
 });
 
 test("dispatcher selects native only when the world setting is native", async () => {
@@ -52,7 +64,7 @@ test("Midi setting falls back to native once when Midi APIs are unavailable", as
   assert.equal(warnings, 1);
 });
 
-test("Midi resolver uses TrapWorkflow for a save and DamageOnlyWorkflow without one", async () => {
+test("Midi resolver uses completeActivityUse targetUuids for a multi-target save and DamageOnlyWorkflow without one", async () => {
   const hooks = new Map();
   const calls = [];
   globalThis.Hooks = {
@@ -66,20 +78,25 @@ test("Midi resolver uses TrapWorkflow for a save and DamageOnlyWorkflow without 
       prepareFinalAttributes() {}
     } }
   };
-  class TrapWorkflow {
-    constructor(...args) { this.aborted = false; this.saves = new Set(); this.damageTotal = 7; calls.push("trap"); queueMicrotask(() => hooks.get("midi-qol.RollComplete")?.(this)); }
-  }
   class DamageOnlyWorkflow {
     constructor(...args) { this.aborted = false; this.damageTotal = 4; calls.push("damage-only"); queueMicrotask(() => hooks.get("midi-qol.RollComplete")?.(this)); }
   }
-  globalThis.MidiQOL = { TrapWorkflow, DamageOnlyWorkflow };
+  globalThis.MidiQOL = {
+    DamageOnlyWorkflow,
+    async completeActivityUse(activity, usage) {
+      assert.equal(usage.midiOptions.ignoreUserTargets, true);
+      calls.push(`complete:${usage.midiOptions.targetUuids.join(",")}`);
+      return { aborted: false, saves: new Set(), damageTotal: 7 };
+    }
+  };
   globalThis.foundry = { utils: { randomID: () => "workflow-id" } };
   globalThis.Roll = class { constructor() { this.total = 4; } async evaluate() { return this; } };
   const actor = {};
-  const token = { id: "target" };
-  const saveResult = await resolver.resolveMidiResolution({ sourceActor: actor, targetToken: token, save: { enabled: true, ability: "dex", dc: 12 }, damage: { enabled: true, formula: "2d6", type: "fire" } });
+  const token = { id: "target", uuid: "Scene.scene.Token.target" };
+  const secondToken = { id: "target-2", uuid: "Scene.scene.Token.target-2" };
+  const saveResult = await resolver.resolveMidiResolution({ sourceActor: actor, targetTokens: [token, secondToken], save: { enabled: true, ability: "dex", dc: 12 }, damage: { enabled: true, formula: "2d6", type: "fire" } });
   const damageResult = await resolver.resolveMidiResolution({ sourceActor: actor, targetToken: token, damage: { enabled: true, formula: "2d6", type: "fire" } });
   assert.equal(saveResult.status, "resolved");
   assert.equal(damageResult.status, "resolved");
-  assert.deepEqual(calls, ["trap", "damage-only"]);
+  assert.deepEqual(calls, ["complete:Scene.scene.Token.target,Scene.scene.Token.target-2", "damage-only"]);
 });

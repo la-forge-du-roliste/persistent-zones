@@ -80,6 +80,7 @@
           "RectangleWallsTerrain": { "Name": "Debug/Test — Rectangle + Walls + Terrain", "Description": "A centered wall-restricted rectangle with standard ×2 difficult terrain." },
           "DamageScaling3d8": { "Name": "Debug/Test — Scaling 3d8 + 1d8/slot", "Description": "Enter the circle after casting at the spell's base slot, then higher slots, to verify one extra 1d8 per slot level." },
           "DamageScalingConstant": { "Name": "Debug/Test — Scaling constant", "Description": "A non-d8 scaling fixture: 2d6 plus 3 per higher slot level." },
+          "SharedOnCreateScaling": { "Name": "Debug/Test — Shared OnCreate Damage and Scaling", "Description": "Place at least two creatures in the circle before it is created: each makes its own Dexterity save, but all use the same 5d8 damage roll, with +1d8 per higher slot level." },
           "HealingScaling": { "Name": "Debug/Test — Healing scaling", "Description": "Enter the circle after casting at higher slots to verify scalable healing." },
           "TemporaryHitPointsScaling": { "Name": "Debug/Test — Temporary HP scaling", "Description": "Enter the circle after casting at higher slots to verify scalable temporary hit points." }
         },

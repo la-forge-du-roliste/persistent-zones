@@ -48,6 +48,7 @@ export async function applyConfiguredTriggerEffect({
   timing = "custom",
   context = {}
 }) {
+  const prepared = context.prepared ?? null;
   const actor = tokenDocument?.actor ?? null;
   const normalizedTiming = String(timing || "custom");
   const configuredTrigger = triggerConfig ?? {};
@@ -106,14 +107,14 @@ export async function applyConfiguredTriggerEffect({
     currentInside: context.currentInside ?? null
   };
 
-  const targetFilterDecision = evaluateTriggerTargetFilter({
+  const targetFilterDecision = prepared?.targetFilterDecision ?? evaluateTriggerTargetFilter({
     regionDocument,
     runtime,
     triggerConfig: resolvedTrigger,
     triggerId: normalizedTiming,
     tokenDocument
   });
-  if (!targetFilterDecision.allowed) {
+  if (!prepared && !targetFilterDecision.allowed) {
     return buildSkippedResult(`Target filter rejected the ${normalizedTiming} trigger.`, {
       ...baseDiagnostic,
       timing: normalizedTiming,
@@ -123,7 +124,7 @@ export async function applyConfiguredTriggerEffect({
     });
   }
 
-  if (actionConfig.debugFeedback) {
+  if (!prepared && actionConfig.debugFeedback) {
     globalThis.ui?.notifications?.info?.(globalThis.game?.i18n?.format?.("PERSISTENT_ZONES.Runtime.DebugTargetingFeedback", {
       token: tokenDocument?.name ?? tokenDocument?.document?.name ?? tokenDocument?.id ?? "Token",
       mode: actionConfig.targeting?.mode ?? "membership"
@@ -143,7 +144,7 @@ export async function applyConfiguredTriggerEffect({
     skippedReason: null
   });
 
-  if (!actor) {
+  if (!prepared && !actor) {
     logPzEffectSkipped("token-has-no-actor", baseDiagnostic, resolvedTrigger);
     logV14RuntimeDiagnostic("simpleEffectSuppressed", {
       ...baseDiagnostic,
@@ -159,7 +160,7 @@ export async function applyConfiguredTriggerEffect({
     });
   }
 
-  if (!actionConfig.enabled) {
+  if (!prepared && !actionConfig.enabled) {
     logPzEffectSkipped("trigger-disabled", baseDiagnostic, resolvedTrigger);
     logV14RuntimeDiagnostic("simpleEffectSuppressed", {
       ...baseDiagnostic,
@@ -175,7 +176,7 @@ export async function applyConfiguredTriggerEffect({
     });
   }
 
-  if (triggerMode === "none") {
+  if (!prepared && triggerMode === "none") {
     debug(`Skipped ${normalizedTiming} effect because mode = none.`, {
       regionId: regionDocument?.id ?? null,
       tokenId: tokenDocument?.id ?? null,
@@ -199,8 +200,8 @@ export async function applyConfiguredTriggerEffect({
     });
   }
 
-  const absentStatusConflict = findRequiredAbsentStatusConflict(actor, resolvedTrigger.requiredAbsentStatuses);
-  if (absentStatusConflict) {
+  const absentStatusConflict = prepared ? null : findRequiredAbsentStatusConflict(actor, resolvedTrigger.requiredAbsentStatuses);
+  if (!prepared && absentStatusConflict) {
     return buildSkippedResult(`${normalizedTiming} requires status ${absentStatusConflict} to be absent.`, {
       ...baseDiagnostic,
       timing: normalizedTiming,
@@ -210,14 +211,14 @@ export async function applyConfiguredTriggerEffect({
     });
   }
 
-  const absentSourceStatusConflict = findRequiredAbsentSourceStatusConflict({
+  const absentSourceStatusConflict = prepared ? null : findRequiredAbsentSourceStatusConflict({
     actor,
     regionDocument,
     tokenDocument,
     partId,
     requiredAbsentSourceStatuses: resolvedTrigger.requiredAbsentSourceStatuses
   });
-  if (absentSourceStatusConflict) {
+  if (!prepared && absentSourceStatusConflict) {
     return buildSkippedResult(`${normalizedTiming} requires source status ${absentSourceStatusConflict} to be absent.`, {
       ...baseDiagnostic,
       timing: normalizedTiming,
@@ -227,7 +228,7 @@ export async function applyConfiguredTriggerEffect({
     });
   }
 
-  const frequencyDecision = await reserveTriggerFrequency({
+  const frequencyDecision = prepared?.frequencyDecision ?? await reserveTriggerFrequency({
     regionDocument,
     tokenDocument,
     triggerConfig: resolvedTrigger,
@@ -246,6 +247,15 @@ export async function applyConfiguredTriggerEffect({
   });
   if (!frequencyDecision.allowed) {
     return buildSkippedResult(`${normalizedTiming} already applied for this frequency group this turn.`, { ...baseDiagnostic, timing: normalizedTiming, partId, triggerMode, frequency: frequencyDecision.frequency, frequencyReason: frequencyDecision.reason });
+  }
+
+  if (context.prepareOnly) {
+    return {
+      applied: false,
+      skipped: false,
+      prepared: { frequencyDecision, targetFilterDecision },
+      tokenDocument
+    };
   }
 
   if (triggerMode === "activity") {
@@ -366,7 +376,15 @@ export async function applyConfiguredTriggerEffect({
         castLevel: runtime.castLevel ?? runtime.normalizedDefinition?.castLevel ?? null
       })
       : null;
-    const dispatchedResolution = await resolveResolutionRequest({
+    const sharedDamage = resolvedTrigger.damage?.enabled && context.sharedResolution && context.dispatchedResolution?.engine !== "midi-qol"
+      ? await resolveSharedDamageRoll({
+        sharedResolution: context.sharedResolution,
+        resolvedScaling: resolvedDamageScaling,
+        damageType: resolvedTrigger.damage.type,
+        timing: normalizedTiming
+      })
+      : null;
+    const dispatchedResolution = context.dispatchedResolution ?? await resolveResolutionRequest({
       request: resolutionRequest,
       sourceActor: sourceItem?.actor ?? actor,
       sourceToken: sourceToken?.object ?? sourceToken,
@@ -379,7 +397,7 @@ export async function applyConfiguredTriggerEffect({
       } : null,
       damage: resolvedTrigger.damage?.enabled ? {
         enabled: true,
-        formula: resolvedDamageScaling?.formula ?? resolvedTrigger.damage.formula,
+        formula: sharedDamage ? String(sharedDamage.rolledDamage) : (resolvedDamageScaling?.formula ?? resolvedTrigger.damage.formula),
         type: resolvedTrigger.damage.type,
         onSuccess: resolvedTrigger.save?.onSuccess ?? "half"
       } : null
@@ -548,7 +566,8 @@ export async function applyConfiguredTriggerEffect({
         saveResult,
         regionDocument,
         tokenDocument,
-        normalizedTiming
+        normalizedTiming,
+        sharedDamage
       )
       : buildNoDamageResult(resolvedTrigger.damage);
     const appliedDamage = coerceNumber(damageResult?.appliedDamage, 0);
@@ -1138,6 +1157,78 @@ export async function applyTriggeredEndConcentration({ actor, config = {}, saveE
   if (!effect) return { applied: false, skipped: true, reason: "not-concentrating" };
   const deleted = await actor.endConcentration(effect);
   return { applied: Array.isArray(deleted) && deleted.length > 0, deletedEffectIds: Array.from(deleted ?? []).map((entry) => entry?.id).filter(Boolean) };
+}
+
+/** Resolve one simultaneous trigger occurrence after PZ has qualified every target. */
+export async function applyConfiguredTriggerEffectsBatch({
+  regionDocument,
+  tokenDocuments = [],
+  triggerConfig,
+  timing = "custom",
+  context = {}
+} = {}) {
+  const preparedTargets = [];
+  const results = [];
+  for (const tokenDocument of tokenDocuments) {
+    const preparation = await applyConfiguredTriggerEffect({
+      regionDocument, tokenDocument, triggerConfig, timing,
+      context: { ...context, prepareOnly: true }
+    });
+    if (preparation?.prepared) preparedTargets.push({ tokenDocument, prepared: preparation.prepared });
+    else results.push(preparation);
+  }
+  if (!preparedTargets.length) return results;
+
+  const runtime = getRegionRuntimeFlags(regionDocument) ?? {};
+  const configuredTrigger = triggerConfig ?? {};
+  const actionConfig = resolveTriggerActionConfiguration({
+    zoneConfiguration: runtime.normalizedDefinition,
+    triggerId: String(timing || "custom"),
+    triggerConfig: configuredTrigger
+  });
+  const sourceItem = await resolveRuntimeItem(runtime);
+  const sourceTokenDocument = runtime.sourceTokenUuid ? await fromUuidSafe(runtime.sourceTokenUuid) : null;
+  const resolvedDc = actionConfig.save?.enabled
+    ? await resolveConfiguredSaveDc(actionConfig.save, regionDocument)
+    : null;
+  const resolvedDamageScaling = actionConfig.damage?.enabled
+    ? resolveScaledFormula({
+      formula: actionConfig.damage.formula,
+      scaling: actionConfig.damage.scaling,
+      castLevel: runtime.castLevel ?? runtime.normalizedDefinition?.castLevel ?? null
+    })
+    : null;
+  const firstTarget = preparedTargets[0].tokenDocument;
+  const request = buildResolutionRequest({
+    regionDocument, tokenDocument: firstTarget, runtime, timing,
+    triggerConfig: actionConfig, context
+  });
+  const dispatchedResolution = actionConfig.save?.enabled && resolvedDc === null ? null : await resolveResolutionRequest({
+    request,
+    sourceActor: sourceItem?.actor ?? sourceTokenDocument?.actor ?? firstTarget?.actor,
+    sourceToken: sourceTokenDocument?.object ?? sourceTokenDocument,
+    targetTokens: preparedTargets.map(({ tokenDocument }) => tokenDocument?.object ?? tokenDocument),
+    save: actionConfig.save?.enabled ? {
+      enabled: true,
+      ability: actionConfig.save.ability ?? "dex",
+      dc: resolvedDc,
+      onSuccess: actionConfig.save.onSuccess ?? "half"
+    } : null,
+    damage: actionConfig.damage?.enabled ? {
+      enabled: true,
+      formula: resolvedDamageScaling?.formula ?? actionConfig.damage.formula,
+      type: actionConfig.damage.type,
+      onSuccess: actionConfig.save?.onSuccess ?? "half"
+    } : null
+  });
+  const sharedResolution = { damage: null };
+  for (const { tokenDocument, prepared } of preparedTargets) {
+    results.push(await applyConfiguredTriggerEffect({
+      regionDocument, tokenDocument, triggerConfig, timing,
+      context: { ...context, prepared, dispatchedResolution, sharedResolution }
+    }));
+  }
+  return results;
 }
 
 function resolveStatusTurnContext(tokenDocument, context = {}) {
@@ -1924,7 +2015,7 @@ async function resolveConfiguredSaveDc(saveConfig, regionDocument) {
   return resolvedDc;
 }
 
-async function resolveDamageResult(damageConfig, saveResult, regionDocument, tokenDocument, timing = "custom") {
+async function resolveDamageResult(damageConfig, saveResult, regionDocument, tokenDocument, timing = "custom", sharedDamage = null) {
   const timingLabel = String(timing || "custom");
   const runtime = getRegionRuntimeFlags(regionDocument) ?? {};
   const resolvedScaling = resolveScaledFormula({
@@ -1932,7 +2023,7 @@ async function resolveDamageResult(damageConfig, saveResult, regionDocument, tok
     scaling: damageConfig.scaling,
     castLevel: runtime.castLevel ?? runtime.normalizedDefinition?.castLevel ?? null
   });
-  const roll = resolvedScaling.formula
+  const roll = !sharedDamage && resolvedScaling.formula
     ? new Roll(resolvedScaling.formula, resolvedScaling.rollData)
     : null;
 
@@ -1940,7 +2031,9 @@ async function resolveDamageResult(damageConfig, saveResult, regionDocument, tok
     await roll.evaluate();
   }
 
-  const rolledDamage = coerceNumber(roll?.total, damageConfig.amount ?? 0);
+  const rolledDamage = sharedDamage
+    ? coerceNumber(sharedDamage.rolledDamage, damageConfig.amount ?? 0)
+    : coerceNumber(roll?.total, damageConfig.amount ?? 0);
   const appliedDamage = adjustDamageForSave(rolledDamage, saveResult);
 
   if (roll) {
@@ -1969,6 +2062,27 @@ async function resolveDamageResult(damageConfig, saveResult, regionDocument, tok
     appliedDamage: result.appliedDamage
   });
 
+  return result;
+}
+
+async function resolveSharedDamageRoll({ sharedResolution, resolvedScaling, damageType, timing }) {
+  if (sharedResolution.damage) return sharedResolution.damage;
+  const formula = resolvedScaling?.formula ?? null;
+  const roll = formula ? new Roll(formula, resolvedScaling?.rollData ?? {}) : null;
+  if (roll) await roll.evaluate();
+  const result = {
+    formula,
+    scaling: resolvedScaling?.scaling ?? null,
+    castLevel: resolvedScaling?.castLevel ?? null,
+    extraLevels: resolvedScaling?.extraLevels ?? 0,
+    rolledDamage: Math.max(coerceNumber(roll?.total, 0), 0)
+  };
+  sharedResolution.damage = result;
+  if (roll) {
+    await roll.toMessage({
+      flavor: `Persistent Zones ${String(timing || "onCreate")} shared damage (${damageType ?? "untyped"})`
+    });
+  }
   return result;
 }
 

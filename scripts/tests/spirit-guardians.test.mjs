@@ -73,7 +73,7 @@ test("Spirit Guardians keeps terrain filtering, scaling, and restriction in norm
     formula: normalized.triggers.onEnter.damage.formula,
     scaling: normalized.triggers.onEnter.damage.scaling,
     castLevel: normalized.castLevel
-  }).formula, "3d8 + (1d8) + (1d8)");
+  }).formula, "3d8 + 1d8 + 1d8");
 });
 
 test("Spirit Guardians shares its once-per-turn ledger across creation, entry, and turn end", async () => {

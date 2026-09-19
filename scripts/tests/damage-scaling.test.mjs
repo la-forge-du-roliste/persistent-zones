@@ -14,19 +14,19 @@ const fixedScaling = { mode: "per-level", baseLevelMode: "fixed", baseLevel: 3, 
 
 test("item-level scaling applies the complete extra formula once per higher slot", () => {
   assert.equal(resolveScaledFormula({ formula: "3d8", scaling: itemScaling, castLevel: 1, itemBaseLevel: 1 }).formula, "3d8");
-  assert.equal(resolveScaledFormula({ formula: "3d8", scaling: itemScaling, castLevel: 2, itemBaseLevel: 1 }).formula, "3d8 + (1d8)");
+  assert.equal(resolveScaledFormula({ formula: "3d8", scaling: itemScaling, castLevel: 2, itemBaseLevel: 1 }).formula, "3d8 + 1d8");
   const fifth = resolveScaledFormula({ formula: "3d8", scaling: itemScaling, castLevel: 3, itemBaseLevel: 1 });
-  assert.equal(fifth.formula, "3d8 + (1d8) + (1d8)");
+  assert.equal(fifth.formula, "3d8 + 1d8 + 1d8");
   assert.equal(fifth.extraLevels, 2);
   assert.equal(fifth.scaling.resolvedBaseLevel, 1);
 });
 
 test("level-three spells, fixed mode, and legacy numeric base levels remain supported", () => {
   assert.equal(resolveScaledFormula({ formula: "3d8", scaling: itemScaling, castLevel: 3, itemBaseLevel: 3 }).formula, "3d8");
-  assert.equal(resolveScaledFormula({ formula: "3d8", scaling: itemScaling, castLevel: 4, itemBaseLevel: 3 }).formula, "3d8 + (1d8)");
-  assert.equal(resolveScaledFormula({ formula: "3d8", scaling: itemScaling, castLevel: 5, itemBaseLevel: 3 }).formula, "3d8 + (1d8) + (1d8)");
-  assert.equal(resolveScaledFormula({ formula: "3d8", scaling: fixedScaling, castLevel: 4, itemBaseLevel: 1 }).formula, "3d8 + (1d8)");
-  assert.equal(resolveScaledFormula({ formula: "3d8", scaling: { mode: "per-level", baseLevel: 3, perLevelFormula: "1d8" }, castLevel: 4, itemBaseLevel: 1 }).formula, "3d8 + (1d8)");
+  assert.equal(resolveScaledFormula({ formula: "3d8", scaling: itemScaling, castLevel: 4, itemBaseLevel: 3 }).formula, "3d8 + 1d8");
+  assert.equal(resolveScaledFormula({ formula: "3d8", scaling: itemScaling, castLevel: 5, itemBaseLevel: 3 }).formula, "3d8 + 1d8 + 1d8");
+  assert.equal(resolveScaledFormula({ formula: "3d8", scaling: fixedScaling, castLevel: 4, itemBaseLevel: 1 }).formula, "3d8 + 1d8");
+  assert.equal(resolveScaledFormula({ formula: "3d8", scaling: { mode: "per-level", baseLevel: 3, perLevelFormula: "1d8" }, castLevel: 4, itemBaseLevel: 1 }).formula, "3d8 + 1d8");
 });
 
 test("scaling is safe for absent or lower cast levels and supports constants", () => {
@@ -59,7 +59,7 @@ test("normalized trigger retains scaling and cast level throughout the zone life
     formula: "3d8",
     scaling: normalized.triggers.onEnter.damage.scaling,
     castLevel: normalized.castLevel
-  }).formula, "3d8 + (1d8) + (1d8)");
+  }).formula, "3d8 + 1d8 + 1d8");
 });
 
 test("the same scaling configuration is preserved for every damage trigger timing", () => {
@@ -107,8 +107,8 @@ test("damage, healing, and temporary hit points retain independent scaling", () 
     }
   }, { item: { system: { level: 1 } } });
   const trigger = normalized.triggers.onEnter;
-  assert.equal(resolveScaledFormula({ formula: trigger.damage.formula, scaling: trigger.damage.scaling, castLevel: 3 }).formula, "2d6 + (1d8) + (1d8)");
-  assert.equal(resolveScaledFormula({ formula: trigger.healing.formula, scaling: trigger.healing.scaling, castLevel: 3 }).formula, "2d8 + (1d8) + (1d8)");
+  assert.equal(resolveScaledFormula({ formula: trigger.damage.formula, scaling: trigger.damage.scaling, castLevel: 3 }).formula, "2d6 + 1d8 + 1d8");
+  assert.equal(resolveScaledFormula({ formula: trigger.healing.formula, scaling: trigger.healing.scaling, castLevel: 3 }).formula, "2d8 + 1d8 + 1d8");
   assert.equal(resolveScaledFormula({ formula: trigger.temporaryHitPoints.formula, scaling: trigger.temporaryHitPoints.scaling, castLevel: 3 }).formula, "5 + (5) + (5)");
 });
 

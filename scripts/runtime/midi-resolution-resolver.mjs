@@ -2,7 +2,7 @@ import { MODULE_ID } from "../constants.mjs";
 
 export function isMidiResolutionAvailable() {
   return Boolean(
-    globalThis.MidiQOL?.TrapWorkflow &&
+    globalThis.MidiQOL?.completeActivityUse &&
     globalThis.MidiQOL?.DamageOnlyWorkflow &&
     globalThis.CONFIG?.Item?.documentClass &&
     globalThis.Hooks?.on &&
@@ -32,7 +32,7 @@ export function buildMidiResolutionItemData({
         activation: { type: "special", value: null, condition: "" },
         consumption: { targets: [], scaling: { allowed: false } },
         duration: { concentration: false, value: null, units: "inst" },
-        target: { affects: { type: "creature", count: "1", choice: false, special: "" }, template: { type: "", size: "", width: "", height: "", units: "ft", contiguous: false } },
+        target: { affects: { type: "creature", count: "", choice: false, special: "" }, template: { type: "", size: "", width: "", height: "", units: "ft", contiguous: false } },
         ...(hasSave ? { save: { ability: [save.ability ?? "dex"], dc: { calculation: "", formula: String(save.dc ?? 10) } } } : {}),
         damage: {
           onSave: String(save?.onSuccess ?? "half").toLowerCase(),
@@ -43,25 +43,36 @@ export function buildMidiResolutionItemData({
   };
 }
 
-export async function resolveMidiResolution({ sourceActor, sourceToken, targetToken, save = null, damage = null } = {}) {
+export async function resolveMidiResolution({ sourceActor, sourceToken, targetToken, targetTokens = null, save = null, damage = null } = {}) {
   if (!isMidiResolutionAvailable()) return { status: "unavailable", engine: "midi-qol", error: "midi-qol-unavailable" };
   const hasSave = Boolean(save?.enabled);
   const hasDamage = Boolean(damage?.enabled && damage?.formula);
   if (!hasSave && !hasDamage) return { status: "resolved", engine: "midi-qol", applied: false };
-  if (!sourceActor || !targetToken) return { status: "error", engine: "midi-qol", error: "midi-resolution-missing-source-or-target" };
-  if (!hasSave) return resolveMidiDamageOnly({ sourceActor, sourceToken, targetToken, damage });
+  const targets = Array.from(targetTokens ?? (targetToken ? [targetToken] : [])).filter(Boolean);
+  if (!sourceActor || !targets.length) return { status: "error", engine: "midi-qol", error: "midi-resolution-missing-source-or-target" };
+  if (!hasSave) return resolveMidiDamageOnly({ sourceActor, sourceToken, targetTokens: targets, damage });
 
   const item = new CONFIG.Item.documentClass(buildMidiResolutionItemData({ save, damage }), { parent: sourceActor });
   item.prepareData?.();
   item.prepareFinalAttributes?.();
   const activity = item.system.activities?.contents?.[0] ?? item.system.activities?.get?.(item.id);
   if (!activity) return { status: "error", engine: "midi-qol", error: "midi-resolution-activity-unavailable" };
-  return waitForMidiWorkflow((options) => new MidiQOL.TrapWorkflow(
-    sourceActor, activity, [targetToken], undefined, undefined, options
-  ));
+  try {
+    const workflow = await MidiQOL.completeActivityUse(activity, {
+      configure: false,
+      midiOptions: {
+        targetUuids: targets.map((target) => target?.document?.uuid ?? target?.uuid).filter(Boolean),
+        ignoreUserTargets: true,
+        workflowOptions: { persistentZonesResolution: true, [MODULE_ID]: { resolution: true } }
+      }
+    }, {}, {});
+    return summarizeMidiWorkflow(workflow);
+  } catch (caughtError) {
+    return { status: "error", engine: "midi-qol", error: caughtError?.message ?? "midi-resolution-failed" };
+  }
 }
 
-async function resolveMidiDamageOnly({ sourceActor, sourceToken, targetToken, damage }) {
+async function resolveMidiDamageOnly({ sourceActor, sourceToken, targetTokens, damage }) {
   const roll = new Roll(damage.formula);
   await roll.evaluate();
   return waitForMidiWorkflow((options) => new MidiQOL.DamageOnlyWorkflow(
@@ -69,7 +80,7 @@ async function resolveMidiDamageOnly({ sourceActor, sourceToken, targetToken, da
     sourceToken,
     roll.total,
     damage.type ?? "force",
-    [targetToken],
+    targetTokens,
     roll,
     { ...options, flavor: "Persistent Zones damage" }
   ));
@@ -98,6 +109,19 @@ function waitForMidiWorkflow(createWorkflow) {
       resolve({ status: "error", engine: "midi-qol", error: caughtError?.message ?? "midi-resolution-failed" });
     }
   });
+}
+
+function summarizeMidiWorkflow(workflow) {
+  if (!workflow) return { status: "error", engine: "midi-qol", error: "midi-resolution-workflow-unavailable" };
+  return {
+    status: "resolved",
+    engine: "midi-qol",
+    applied: !workflow.aborted,
+    cancelled: Boolean(workflow.aborted),
+    workflow,
+    save: workflow.saves ?? null,
+    damage: workflow.damageTotal ?? null
+  };
 }
 
 export function isPersistentZonesSyntheticResolution(document) {

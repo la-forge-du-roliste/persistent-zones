@@ -66,7 +66,7 @@ test("Cloudkill stores generic slot scaling in normalized runtime data", () => {
   assert.equal(normalized.translation.enabled, true);
   assert.equal(normalized.translation.distance, 10);
   const damage = normalized.triggers.onEnter.damage;
-  assert.equal(resolveScaledFormula({ formula: damage.formula, scaling: damage.scaling, castLevel: normalized.castLevel }).formula, "5d8 + (1d8) + (1d8)");
+  assert.equal(resolveScaledFormula({ formula: damage.formula, scaling: damage.scaling, castLevel: normalized.castLevel }).formula, "5d8 + 1d8 + 1d8");
 });
 
 test("Cloudkill frequency group shares its once-per-turn limit across appearance, entry, and turn end", async () => {

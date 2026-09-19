@@ -18,7 +18,7 @@ import {
 globalThis.foundry ??= { utils: { deepClone: structuredClone } };
 
 test("accepts versioned built-in presets", () => {
-  assert.equal(BUILTIN_PRESETS.length, 42);
+  assert.equal(BUILTIN_PRESETS.length, 43);
   for (const candidate of BUILTIN_PRESETS) {
     const preset = normalizePreset(candidate);
     assert.ok(preset);
@@ -306,7 +306,7 @@ test("visible library separates validated SRD and debug movement-cost presets", 
   const ids = getBuiltinPersistentZonePresets().map(({ id }) => id).sort();
   assert.deepEqual(ids, [
     "debug.controlled-zone-movement", "debug.damage-scaling-3d8", "debug.damage-scaling-constant", "debug.geometry-units-ui", "debug.healing-scaling", "debug.linked-distance-units-ui", "debug.midi-qol-resolution",
-    "debug.movement-cost-x2", "debug.movement-cost-x4", "debug.movement-cost-x4-walls", "debug.multipart-geometry-units-ui", "debug.multipart-ui-scaling", "debug.native-resolution", "debug.physical-contact-proximity", "debug.radius-scaling-ui", "debug.rectangle-walls", "debug.rectangle-walls-terrain", "debug.source-visibility", "debug.temporary-hit-points-scaling",
+    "debug.movement-cost-x2", "debug.movement-cost-x4", "debug.movement-cost-x4-walls", "debug.multipart-geometry-units-ui", "debug.multipart-ui-scaling", "debug.native-resolution", "debug.physical-contact-proximity", "debug.radius-scaling-ui", "debug.rectangle-walls", "debug.rectangle-walls-terrain", "debug.shared-on-create-scaling", "debug.source-visibility", "debug.temporary-hit-points-scaling",
     "debug.terrain-x4-allies", "debug.terrain-x4-enemies", "debug.terrain-x4-enemies-walls", "debug.terrain-x4-others", "debug.terrain-x4-self", "debug.token-membership-50", "debug.zone-translation",
     "srd-5.2.1.black-tentacles", "srd-5.2.1.cloudkill", "srd-5.2.1.entangle", "srd-5.2.1.flaming-sphere", "srd-5.2.1.fog-cloud", "srd-5.2.1.grease",
     "srd-5.2.1.insect-plague", "srd-5.2.1.moonbeam", "srd-5.2.1.sleet-storm", "srd-5.2.1.spike-growth", "srd-5.2.1.spirit-guardians-necrotic", "srd-5.2.1.spirit-guardians-radiant",
@@ -321,6 +321,25 @@ test("visible library separates validated SRD and debug movement-cost presets", 
     const preset = getPersistentZonePreset(id);
     assert.equal(preset.source, "builtin");
     assert.equal(preset.category, "debug-tests");
+  }
+});
+
+test("shared OnCreate scaling debug preset is ready for multi-target native and Midi validation", () => {
+  const preset = getPersistentZonePreset("debug.shared-on-create-scaling");
+  const trigger = preset.persistentZone.triggers.onCreate;
+  assert.deepEqual(preset.persistentZone.geometry, { type: "circle", radius: 20, units: "ft" });
+  assert.deepEqual(preset.persistentZone.obstacles, { mode: "unrestricted" });
+  assert.equal(trigger.enabled, true);
+  assert.deepEqual(trigger.simpleEffect.save, { enabled: true, ability: "dex", dcMode: "inherit", dc: null, onSave: "half" });
+  assert.equal(trigger.simpleEffect.damage.formula, "5d8");
+  assert.equal(trigger.simpleEffect.damage.type, "force");
+  for (const [castLevel, formula] of [[4, "5d8"], [5, "5d8 + 1d8"], [6, "5d8 + 1d8 + 1d8"]]) {
+    assert.equal(resolveScaledFormula({
+      formula: trigger.simpleEffect.damage.formula,
+      scaling: trigger.simpleEffect.damage.scaling,
+      castLevel,
+      itemBaseLevel: 4
+    }).formula, formula);
   }
 });
 
@@ -439,8 +458,8 @@ test("multipart UI scaling Debug/Test preset is ready to apply and preserves dis
   const partADamage = persisted.parts[0].triggers.enter.simpleEffect.damage;
   const partBHealing = persisted.parts[1].triggers.turnEnd.simpleEffect.healing;
   assert.equal(resolveScaledFormula({ formula: partADamage.formula, scaling: partADamage.scaling, castLevel: 1 }).formula, "2d6");
-  assert.equal(resolveScaledFormula({ formula: partADamage.formula, scaling: partADamage.scaling, castLevel: 2 }).formula, "2d6 + (1d6)");
-  assert.equal(resolveScaledFormula({ formula: partADamage.formula, scaling: partADamage.scaling, castLevel: 3 }).formula, "2d6 + (1d6) + (1d6)");
+  assert.equal(resolveScaledFormula({ formula: partADamage.formula, scaling: partADamage.scaling, castLevel: 2 }).formula, "2d6 + 1d6");
+  assert.equal(resolveScaledFormula({ formula: partADamage.formula, scaling: partADamage.scaling, castLevel: 3 }).formula, "2d6 + 1d6 + 1d6");
   assert.equal(resolveScaledFormula({ formula: partBHealing.formula, scaling: partBHealing.scaling, castLevel: 1 }).formula, "1d4");
   assert.equal(resolveScaledFormula({ formula: partBHealing.formula, scaling: partBHealing.scaling, castLevel: 2 }).formula, "1d4");
   assert.equal(resolveScaledFormula({ formula: partBHealing.formula, scaling: partBHealing.scaling, castLevel: 3 }).formula, "1d4 + (2)");

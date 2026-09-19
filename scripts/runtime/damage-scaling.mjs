@@ -46,7 +46,7 @@ export function resolveScaledFormula({ formula = null, scaling = null, castLevel
     : 0;
   const formulaParts = [baseFormula];
   for (let index = 0; index < extraLevels; index += 1) {
-    formulaParts.push(`(${normalizedScaling.perLevelFormula})`);
+    formulaParts.push(formatScalingIncrement(normalizedScaling.perLevelFormula));
   }
   return {
     formula: formulaParts.filter(Boolean).join(" + ") || null,
@@ -62,6 +62,17 @@ export function resolveScaledFormula({ formula = null, scaling = null, castLevel
       }
     }
   };
+}
+
+/**
+ * Keep a single die increment as a root Roll term so downstream renderers can
+ * display its individual results. Other expressions remain parenthesized to
+ * preserve their established arithmetic semantics when appended.
+ */
+function formatScalingIncrement(formula) {
+  const value = String(formula ?? "").trim();
+  const isDiceTerm = /^\d*d\d+(?:[A-Za-z0-9<>=!]+)*(?:\[[^\]]+\])?$/i.test(value);
+  return isDiceTerm ? value : `(${value})`;
 }
 
 // Compatibility alias for the first damage-only caller. The resolver itself

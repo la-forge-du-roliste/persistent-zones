@@ -22,7 +22,7 @@ for (const level of [3, 4, 5]) {
       formula: "3d8",
       scaling: { mode: "per-level", baseLevel: 3, perLevelFormula: "1d8" },
       castLevel: resolved.castLevel
-    }).formula, level === 3 ? "3d8" : level === 4 ? "3d8 + (1d8)" : "3d8 + (1d8) + (1d8)");
+    }).formula, level === 3 ? "3d8" : level === 4 ? "3d8 + 1d8" : "3d8 + 1d8 + 1d8");
   });
 }
 
@@ -70,5 +70,5 @@ test("Activity-to-runtime conversion retains configured damage scaling", () => {
     formula: configuration.normalizedDefinition.triggers.onEnter.damage.formula,
     scaling: configuration.normalizedDefinition.triggers.onEnter.damage.scaling,
     castLevel: configuration.normalizedDefinition.castLevel
-  }).formula, "3d8 + (1d8)");
+  }).formula, "3d8 + 1d8");
 });

@@ -235,8 +235,8 @@ function assertWallOfFireTriggers(preset) {
     const config = trigger(preset, partId, timing);
     assert.deepEqual(config.simpleEffect.damage, { enabled: true, formula: "5d8", type: "fire", scaling: expectedScaling });
     assert.equal(resolveScaledFormula({ formula: config.simpleEffect.damage.formula, scaling: config.simpleEffect.damage.scaling, castLevel: 4, itemBaseLevel: 4 }).formula, "5d8");
-    assert.equal(resolveScaledFormula({ formula: config.simpleEffect.damage.formula, scaling: config.simpleEffect.damage.scaling, castLevel: 5, itemBaseLevel: 4 }).formula, "5d8 + (1d8)");
-    assert.equal(resolveScaledFormula({ formula: config.simpleEffect.damage.formula, scaling: config.simpleEffect.damage.scaling, castLevel: 6, itemBaseLevel: 4 }).formula, "5d8 + (1d8) + (1d8)");
+    assert.equal(resolveScaledFormula({ formula: config.simpleEffect.damage.formula, scaling: config.simpleEffect.damage.scaling, castLevel: 5, itemBaseLevel: 4 }).formula, "5d8 + 1d8");
+    assert.equal(resolveScaledFormula({ formula: config.simpleEffect.damage.formula, scaling: config.simpleEffect.damage.scaling, castLevel: 6, itemBaseLevel: 4 }).formula, "5d8 + 1d8 + 1d8");
     assert.equal(config.simpleEffect.save.enabled, false);
     assert.equal(config.frequency, "once-per-turn");
     assert.equal(config.frequencyGroup, timing === "enter" ? "wall-of-fire-enter" : "wall-of-fire-turn-end");

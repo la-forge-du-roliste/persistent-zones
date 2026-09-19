@@ -264,6 +264,10 @@ export async function createAttachedEmanationFromActivity(activity, sourceToken,
     scene
   ) ?? 0);
   const groupId = `attached:${activity?.uuid ?? item.uuid}:${foundry.utils.randomID()}`;
+  const concentrationOwnerResolution = resolveExistingConcentrationOwnerEffect({
+    normalizedDefinition,
+    sourceContext
+  });
   const runtimeFlags = buildManagedRegionRuntimeFlags({
     templateDocument: null,
     normalizedDefinition,
@@ -275,7 +279,8 @@ export async function createAttachedEmanationFromActivity(activity, sourceToken,
     geometryType: "emanation",
     runtimeGeometry: { type: "emanation", radius, units: scene.grid?.units ?? null },
     regionSourceStrategy: "v14-native-token-emanation",
-    architecturePath: REGION_ARCHITECTURE_PATHS.V14_REGION_NATIVE
+    architecturePath: REGION_ARCHITECTURE_PATHS.V14_REGION_NATIVE,
+    sharedOwnerEffectUuid: concentrationOwnerResolution.selectedOwnerEffectUuid
   });
   initializeAttachedEmanationTransitionState(runtimeFlags);
   const behaviorData = normalizedDefinition?.obstacles?.mode === "wall-restricted"
@@ -8678,7 +8683,7 @@ async function buildRuntimeFlagsForUnmanagedCreatedRegion(regionDocument, {
         resolutionMode: "existing-runtime-owner-effect",
         ambiguous: false
       }
-      : resolveExistingConcentrationOwnerEffectForMultipart({
+      : resolveExistingConcentrationOwnerEffect({
         normalizedDefinition: selected.normalizedDefinition,
         sourceContext: selected.sourceContext,
         sourceHints
@@ -9103,7 +9108,7 @@ function findExplicitRegionDocumentForDedicatedOwnerEffect(activeEffect) {
 }
 
 
-function resolveExistingConcentrationOwnerEffectForMultipart({
+export function resolveExistingConcentrationOwnerEffect({
   normalizedDefinition = {},
   sourceContext = null,
   sourceHints = {}
@@ -9496,6 +9501,10 @@ async function buildManagedRegionGroupPlan({
   adoptedV14Source = false,
   sharedOwnerEffectUuid = null
 }) {
+  const ownerResolution = sharedOwnerEffectUuid || normalizedDefinition?.concentration?.required !== true
+    ? null
+    : resolveExistingConcentrationOwnerEffect({ normalizedDefinition, sourceContext });
+  const resolvedSharedOwnerEffectUuid = sharedOwnerEffectUuid ?? ownerResolution?.selectedOwnerEffectUuid ?? null;
   const groupId = buildManagedRegionGroupId(templateDocument, existingRegions);
   const sourceParts = Array.isArray(normalizedDefinition?.parts) && normalizedDefinition.parts.length
     ? normalizedDefinition.parts
@@ -9709,7 +9718,7 @@ async function buildManagedRegionGroupPlan({
         regionSegmentIndex: preparedPart.regionSegmentIndex ?? null,
         regionSegmentCount: preparedPart.regionSegmentCount ?? null,
         architecturePath: preparedPart.architecturePath ?? REGION_ARCHITECTURE_PATHS.LEGACY_TEMPLATE,
-        sharedOwnerEffectUuid
+        sharedOwnerEffectUuid: resolvedSharedOwnerEffectUuid
       })
     };
   });

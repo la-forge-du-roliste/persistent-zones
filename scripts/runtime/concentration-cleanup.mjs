@@ -31,7 +31,7 @@ export function registerConcentrationCleanupHooks() {
   Hooks.on("canvasReady", onCanvasReady);
   Hooks.on("deleteMeasuredTemplate", onDeleteMeasuredTemplate);
   Hooks.on("deleteItem", onDeleteItem);
-  Hooks.on("deleteActiveEffect", onDeleteActiveEffect);
+  Hooks.on("deleteActiveEffect", handleDeletedOwnerEffect);
   Hooks.on("updateActiveEffect", onUpdateActiveEffect);
 
   hooksRegistered = true;
@@ -574,7 +574,7 @@ async function onDeleteItem(item) {
   }
 }
 
-async function onDeleteActiveEffect(activeEffect, options = {}) {
+export async function handleDeletedOwnerEffect(activeEffect, options = {}) {
   if (!isPrimaryGM()) {
     return;
   }
@@ -670,7 +670,7 @@ async function onUpdateActiveEffect(activeEffect, changed = {}, options = {}) {
   }
 }
 
-function findManagedRegionsByOwnerEffect(ownerEffectUuid) {
+export function findManagedRegionsByOwnerEffect(ownerEffectUuid) {
   if (!ownerEffectUuid) {
     return [];
   }

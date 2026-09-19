@@ -11,6 +11,27 @@ globalThis.canvas ??= {
 
 const { applyRegionOnCreateTrigger } = await import("../runtime/on-create-runtime.mjs");
 
+test("onCreate passes one shared resolution context to every affected target", async () => {
+  const { region } = buildEnabledRegion();
+  const tokens = [
+    { id: "target-a", actor: { uuid: "Actor.a" } },
+    { id: "target-b", actor: { uuid: "Actor.b" } }
+  ];
+  const contexts = [];
+  const result = await applyRegionOnCreateTrigger(region, {
+    collectCandidates: () => tokens,
+    testInside: () => true,
+    settle: async () => {},
+    applyEffect: async ({ context }) => {
+      contexts.push(context.sharedResolution);
+      return { applied: true, skipped: false };
+    }
+  });
+  assert.equal(result.appliedCount, 2);
+  assert.ok(contexts[0]);
+  assert.equal(contexts[0], contexts[1]);
+});
+
 test("onCreate completion marker is persisted once even when the trigger is disabled", async () => {
   const runtime = { normalizedDefinition: { enabled: true, triggers: { onCreate: { enabled: false } } } };
   let updates = 0;
@@ -65,6 +86,29 @@ test("onCreate retries candidate discovery once before completing", async () => 
   assert.equal(collections, 2);
   assert.equal(effects, 1);
   assert.equal(runtime.onCreateTriggerCompleted, true);
+});
+
+test("onCreate sends all eligible targets to one batch resolution", async () => {
+  const { region } = buildEnabledRegion();
+  const tokens = [
+    { id: "batch-a", actor: { uuid: "Actor.a" } },
+    { id: "batch-b", actor: { uuid: "Actor.b" } },
+    { id: "batch-c", actor: { uuid: "Actor.c" } }
+  ];
+  let batchCalls = 0;
+  const result = await applyRegionOnCreateTrigger(region, {
+    collectCandidates: () => tokens,
+    testInside: () => true,
+    settle: async () => {},
+    applyBatch: async ({ tokenDocuments, timing }) => {
+      batchCalls += 1;
+      assert.equal(timing, "onCreate");
+      assert.deepEqual(tokenDocuments, tokens);
+      return tokenDocuments.map(() => ({ applied: true, skipped: false }));
+    }
+  });
+  assert.equal(batchCalls, 1);
+  assert.equal(result.appliedCount, 3);
 });
 
 test("thin-wall onCreate uses positive geometric intersection for Medium and Large tokens", async () => {

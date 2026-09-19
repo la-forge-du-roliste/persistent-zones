@@ -80,6 +80,7 @@
           "RectangleWallsTerrain": { "Name": "Debug/Test — Rectangle + murs + terrain", "Description": "Un rectangle centré restreint par les murs, avec terrain difficile standard ×2." },
           "DamageScaling3d8": { "Name": "Debug/Test — Scaling 3d8 + 1d8/emplacement", "Description": "Entrez dans le cercle après un lancement à l’emplacement de base du sort, puis à un emplacement supérieur, pour vérifier +1d8 par niveau." },
           "DamageScalingConstant": { "Name": "Debug/Test — Scaling constant", "Description": "Fixture non-d8 : 2d6 plus 3 par niveau d’emplacement supérieur." },
+          "SharedOnCreateScaling": { "Name": "Debug/Test — OnCreate dégâts partagés et scaling", "Description": "Placez au moins deux créatures dans le cercle avant sa création : chacune effectue son propre JDS de Dextérité, mais toutes utilisent le même jet de dégâts 5d8, avec +1d8 par niveau d’emplacement supérieur." },
           "HealingScaling": { "Name": "Debug/Test — Scaling des soins", "Description": "Entrez dans le cercle après un lancement à un emplacement supérieur pour vérifier les soins évolutifs." },
           "TemporaryHitPointsScaling": { "Name": "Debug/Test — Scaling des PV temporaires", "Description": "Entrez dans le cercle après un lancement à un emplacement supérieur pour vérifier les PV temporaires évolutifs." }
         },

@@ -53,7 +53,7 @@ test("Flaming Sphere keeps generic slot scaling and targeting through Activity d
   const normalized = normalizeZoneDefinition({ ...definition, castLevel: 4 }, { item });
   assert.equal(normalized.triggers.onMove.targeting.mode, "physical-contact");
   assert.equal(normalized.triggers.onEndTurn.targeting.mode, "proximity");
-  assert.equal(resolveScaledFormula({ formula: normalized.triggers.onMove.damage.formula, scaling: normalized.triggers.onMove.damage.scaling, castLevel: 4 }).formula, "2d6 + (1d6) + (1d6)");
+  assert.equal(resolveScaledFormula({ formula: normalized.triggers.onMove.damage.formula, scaling: normalized.triggers.onMove.damage.scaling, castLevel: 4 }).formula, "2d6 + 1d6 + 1d6");
 });
 
 test("Flaming Sphere Debug/Test helper creates a ready cast with one named Bonus Action companion", async () => {
